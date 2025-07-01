@@ -1,0 +1,11 @@
+.background {
+  background: linear-gradient(270deg, #fff9c4, #fff176, #ffeb3b, #fff176, #fff9c4);
+  background-size: 1000% 1000%;
+  animation: yellowGradient 10s ease infinite;
+}
+
+@keyframes yellowGradient {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}

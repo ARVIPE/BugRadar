@@ -1,0 +1,14 @@
+.navbarIcon {
+  position: absolute; 
+  top: 13px; 
+  left: 20px; 
+  width: 32px; 
+  height: 32px; 
+}
+
+.navbarBugRadarTitle{
+  position: absolute; 
+  top: 15px; 
+  left: 64px; 
+  color: #F4F4F6FF; 
+}
