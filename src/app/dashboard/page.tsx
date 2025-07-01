@@ -1,4 +1,5 @@
 import AlertAndChart from "@/components/alertandchart";
+import Footer from "@/components/footer";
 import LogStream from "@/components/logstream";
 import Navbar from "@/components/navbar";
 import RecentActivity from "@/components/recentactivity";
@@ -59,7 +60,9 @@ export default function Dashboard() {
         <LogStream />
         <AlertAndChart/>
         <RecentActivity/>
+
       </div>
+      <Footer />
     </div>
   );
 }
