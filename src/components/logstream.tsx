@@ -116,7 +116,7 @@ export default function LogStream() {
         {logs.map((log, index) => (
           <div
             key={index}
-            className="border border-gray-700 rounded-md p-4 bg-[#1f1f25] shadow-sm"
+            className="border border-gray-700 rounded-md p-4 bg-[#223145] shadow-sm"
           >
             <div className="text-xs text-gray-400 mb-1">Timestamp</div>
             <div className="mb-2">{log.time}</div>

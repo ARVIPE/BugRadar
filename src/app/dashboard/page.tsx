@@ -1,5 +1,7 @@
+import AlertAndChart from "@/components/alertandchart";
 import LogStream from "@/components/logstream";
 import Navbar from "@/components/navbar";
+import RecentActivity from "@/components/recentactivity";
 import { RotateCw, Bug, AlertTriangle, Activity, RefreshCcw } from "lucide-react";
 
 export default function Dashboard() {
@@ -55,6 +57,8 @@ export default function Dashboard() {
         </div>
 
         <LogStream />
+        <AlertAndChart/>
+        <RecentActivity/>
       </div>
     </div>
   );
