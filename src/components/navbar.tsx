@@ -11,8 +11,10 @@ export default function Navbar() {
       <div className=" mx-auto flex items-center justify-between">
         {/* Left: Logo */}
         <div className="flex items-center space-x-2">
+          <a href="/dashboard" className="flex items-center space-x-2">
           <Image src="/navbarIcon.svg" alt="BugRadar Logo" width={28} height={28} />
           <span className="text-white font-semibold text-lg">BugRadar</span>
+          </a>
           <ul className="hidden md:flex ml-5 items-center space-x-6 text-sm font-medium">
             <li>
               <a
@@ -20,6 +22,22 @@ export default function Navbar() {
                 className="text-yellow-400 hover:text-yellow-300 transition-colors"
               >
                 Dashboard
+              </a>
+            </li>
+             <li>
+              <a
+                href="/stats"
+                className="text-white hover:text-gray-300 transition-colors"
+              >
+                Stats
+              </a>
+            </li>
+              <li>
+              <a
+                href="/insight"
+                className="text-white hover:text-gray-300 transition-colors"
+              >
+                Insight
               </a>
             </li>
             <li>
@@ -86,6 +104,18 @@ export default function Navbar() {
             className="block text-yellow-400 font-medium hover:text-yellow-300"
           >
             Dashboard
+          </a>
+          <a
+            href="/stats"
+            className="block text-white hover:text-gray-300"
+          >
+            Stats
+          </a>
+          <a
+            href="/insight"
+            className="block text-white hover:text-gray-300"
+          >
+            Insight
           </a>
           <a
             href="/settings"

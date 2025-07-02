@@ -103,7 +103,7 @@ export default function LogStream() {
             <div>{log.message}</div>
             <div>{log.service}</div>
             <div className="text-right">
-              <a href="#" className="text-yellow-400 hover:underline">
+              <a href="/detail" className="text-yellow-400 hover:underline">
                 View Details
               </a>
             </div>
