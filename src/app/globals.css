@@ -145,6 +145,7 @@ body {
 
   --primary: #f5c044;               /* ámbar bonito para CTA */
   --primary-foreground: #1f2937;    /* texto oscuro, buen contraste */
+  --yellow: #facc15;
 
   
   --highcpuAlert: #f5c044;
