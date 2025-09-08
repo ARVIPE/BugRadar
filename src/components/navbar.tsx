@@ -18,7 +18,7 @@ export default function Navbar() {
   }, [theme])
 
   return (
-    <nav className="bg-skin-panel p-4 shadow-sm border-b border-gray-300 dark:border-gray-700">
+    <nav className="bg-skin-panel p-4 shadow-sm border-b border-border">
       <div className=" mx-auto flex items-center justify-between">
         {/* Left: Logo */}
         <div className="flex items-center space-x-2">
@@ -28,7 +28,7 @@ export default function Navbar() {
           </a>
           <ul className="hidden md:flex ml-5 items-center space-x-6 text-sm font-medium">
             <li>
-              <a href="/dashboard" className="text-yellow-400 hover:text-yellow-300 transition-colors">
+              <a href="/dashboard" className="text-[var(--yellow)]">
                 Dashboard
               </a>
             </li>
@@ -59,7 +59,11 @@ export default function Navbar() {
             <input
               type="text"
               placeholder="Search logs..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-skin-input border border-gray-300 dark:border-gray-700 text-skin-title placeholder-skin-subtitle focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-yellow-400"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-md
+                         bg-[var(--color-input)] text-skin-title
+                         border border-border
+                         placeholder:text-skin-subtitle
+                         focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
             />
           </div>
         </div>
@@ -67,23 +71,23 @@ export default function Navbar() {
         {/* Right: Icons, avatar, hamburger */}
         <div className="flex items-center space-x-4">
           {/* Icons */}
-          <button className="text-skin-subtitle hover:text-yellow-400">
+          <button className="text-skin-subtitle hover:text-[var(--primary)]">
             <Bell size={20} />
           </button>
-          <button className="text-skin-subtitle hover:text-yellow-400">
+          <button className="text-skin-subtitle hover:text-[var(--primary)]">
             <Cog size={20} />
           </button>
 
           {/* Theme toggle button */}
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-full text-skin-subtitle hover:text-yellow-400 transition-all duration-200 hover:bg-skin-input"
+            className="p-2 rounded-full text-skin-subtitle hover:text-[var(--primary)] hover:bg-[var(--color-input)] transition-all duration-200"
             aria-label="Toggle theme"
           >
             {theme === "theme-dark" ? (
-              <Sun size={20} className="text-yellow-400" />
+              <Sun size={20} className="text-[var(--yellow)]" />
             ) : (
-              <Moon size={20} className="text-gray-700" />
+              <Moon size={20} className="text-skin-title" />
             )}
           </button>
 
@@ -93,7 +97,7 @@ export default function Navbar() {
             alt="User"
             width={32}
             height={32}
-            className="rounded-full border border-gray-300 dark:border-gray-700"
+            className="rounded-full border border-border"
           />
 
           {/* Mobile menu toggle */}
@@ -106,7 +110,7 @@ export default function Navbar() {
       {/* Mobile menu dropdown */}
       {isOpen && (
         <div className="md:hidden mt-3 space-y-3 px-2">
-          <a href="/dashboard" className="block text-yellow-400 font-medium hover:text-yellow-300">
+          <a href="/dashboard" className="block text-[var(--primary)] font-medium">
             Dashboard
           </a>
           <a href="/stats" className="block text-skin-title hover:text-skin-subtitle">

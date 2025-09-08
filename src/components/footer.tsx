@@ -2,11 +2,11 @@ import { Twitter, Github, Linkedin } from "lucide-react"
 
 export default function Footer() {
   return (
-    <footer className="bg-skin-panel py-6 border-t border-gray-300 dark:border-gray-700">
+    <footer className="bg-skin-panel py-6 border-t border-border">
       <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row justify-between items-center gap-4 text-skin-subtitle text-sm">
         {/* Left: Language selector */}
         <div>
-          <button className="px-3 py-1.5 bg-skin-bg text-skin-title rounded-md text-xs font-medium border border-gray-300 dark:border-gray-700">
+          <button className="px-3 py-1.5 bg-skin-bg text-skin-title rounded-md text-xs font-medium border border-border hover:bg-skin-panel/60">
             English
           </button>
         </div>
