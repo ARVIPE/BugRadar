@@ -2,20 +2,56 @@
 import Image from "next/image"
 import { Bell, Cog, Menu, Search, X, Moon, Sun } from "lucide-react"
 import { useState, useEffect } from "react"
+import { usePathname } from "next/navigation"
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false)
   const [theme, setTheme] = useState("theme-dark")
+  const pathname = usePathname()
+
+  const applyTheme = (t: string) => {
+    document.documentElement.className = t
+  }
+
+  // Cargar tema guardado y aplicarlo
+  useEffect(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
+    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
+    setTheme(initial)
+    applyTheme(initial)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Guardar y aplicar al cambiar
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", theme)
+    }
+    applyTheme(theme)
+  }, [theme])
+
+  // Sincronizar con otras pestañas
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "theme" && (e.newValue === "theme-light" || e.newValue === "theme-dark")) {
+        setTheme(e.newValue)
+        applyTheme(e.newValue)
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
 
   const toggleTheme = () => {
     const newTheme = theme === "theme-dark" ? "theme-light" : "theme-dark"
     setTheme(newTheme)
-    document.documentElement.className = newTheme
   }
 
-  useEffect(() => {
-    document.documentElement.className = theme
-  }, [theme])
+  // Clase de link activo (usa tu color amarillo existente)
+  const linkClass = (href: string) =>
+    pathname && pathname.startsWith(href)
+      ? "text-[var(--yellow)]"
+      : "text-skin-title hover:text-skin-subtitle transition-colors"
 
   return (
     <nav className="bg-skin-panel p-4 shadow-sm border-b border-border">
@@ -28,22 +64,22 @@ export default function Navbar() {
           </a>
           <ul className="hidden md:flex ml-5 items-center space-x-6 text-sm font-medium">
             <li>
-              <a href="/dashboard" className="text-[var(--yellow)]">
+              <a href="/dashboard" className={linkClass("/dashboard")}>
                 Dashboard
               </a>
             </li>
             <li>
-              <a href="/stats" className="text-skin-title hover:text-skin-subtitle transition-colors">
+              <a href="/stats" className={linkClass("/stats")}>
                 Stats
               </a>
             </li>
             <li>
-              <a href="/insight" className="text-skin-title hover:text-skin-subtitle transition-colors">
+              <a href="/insight" className={linkClass("/insight")}>
                 Insight
               </a>
             </li>
             <li>
-              <a href="/settings" className="text-skin-title hover:text-skin-subtitle transition-colors">
+              <a href="/settings" className={linkClass("/settings")}>
                 Settings
               </a>
             </li>
@@ -110,16 +146,16 @@ export default function Navbar() {
       {/* Mobile menu dropdown */}
       {isOpen && (
         <div className="md:hidden mt-3 space-y-3 px-2">
-          <a href="/dashboard" className="block text-[var(--primary)] font-medium">
+          <a href="/dashboard" className={`block font-medium ${linkClass("/dashboard")}`}>
             Dashboard
           </a>
-          <a href="/stats" className="block text-skin-title hover:text-skin-subtitle">
+          <a href="/stats" className={`block ${linkClass("/stats")}`}>
             Stats
           </a>
-          <a href="/insight" className="block text-skin-title hover:text-skin-subtitle">
+          <a href="/insight" className={`block ${linkClass("/insight")}`}>
             Insight
           </a>
-          <a href="/settings" className="block text-skin-title hover:text-skin-subtitle">
+          <a href="/settings" className={`block ${linkClass("/settings")}`}>
             Settings
           </a>
         </div>

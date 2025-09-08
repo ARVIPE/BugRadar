@@ -4,19 +4,43 @@ import Image from 'next/image'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { useRouter } from 'next/navigation'
-import { Moon, Sun } from "lucide-react"  // íconos cool
-
-const THEMES = ["theme-light", "theme-dark"]
+import { Moon, Sun } from "lucide-react"
 
 export default function LoginPage() {
   const [password, setPassword] = useState('')
-  const [theme, setTheme] = useState("theme-dark")
   const router = useRouter()
+  const [theme, setTheme] = useState("theme-dark")
+
+  const applyTheme = (t: string) => {
+    document.documentElement.className = t
+  }
+
+  // Cargar tema guardado y aplicarlo una vez
+  useEffect(() => {
+    const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
+    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
+    setTheme(initial)
+    applyTheme(initial)
+  }, [])
 
   useEffect(() => {
-    document.body.classList.remove(...THEMES)
-    document.body.classList.add(theme)
+    if (typeof window !== "undefined") {
+      localStorage.setItem("theme", theme)
+    }
+    applyTheme(theme)
   }, [theme])
+
+    // Sincronizar con otras pestañas
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "theme" && (e.newValue === "theme-light" || e.newValue === "theme-dark")) {
+        setTheme(e.newValue)
+        applyTheme(e.newValue)
+      }
+    }
+    window.addEventListener("storage", onStorage)
+    return () => window.removeEventListener("storage", onStorage)
+  }, [])
 
   const handleClick = (e: any) => {
     e.preventDefault()
@@ -24,18 +48,19 @@ export default function LoginPage() {
   }
 
   const toggleTheme = () => {
-    setTheme(theme === "theme-dark" ? "theme-light" : "theme-dark")
+    setTheme(prev => (prev === "theme-dark" ? "theme-light" : "theme-dark"))
   }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-skin-bg transition-colors">
-        <button
-          onClick={toggleTheme}
-          className="absolute top-4 right-4 p-2 rounded-full text-black transition-transform transform hover:scale-110"
-          aria-label="Toggle theme"
-        >
-          {theme === "theme-dark" ? <Sun size={20} style={{ color: 'yellow' }} /> : <Moon size={20} style={{ color: 'black' }} />}
-        </button>
+      <button
+        onClick={toggleTheme}
+        className="absolute top-4 right-4 p-2 rounded-full text-black transition-transform transform hover:scale-110"
+        aria-label="Toggle theme"
+      >
+        {theme === "theme-dark" ? <Sun size={20} style={{ color: 'yellow' }} /> : <Moon size={20} style={{ color: 'black' }} />}
+      </button>
+
       <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border border-gray-700 max-w-xl w-full bg-skin-panel relative">
         <div className="w-full p-8 flex flex-col justify-center">
           <div className="flex flex-col items-center mb-6">

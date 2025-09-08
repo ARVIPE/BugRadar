@@ -16,12 +16,19 @@ export default function SignupPage() {
   const [theme, setTheme] = useState("theme-dark")
 
   const THEMES = ["theme-light", "theme-dark"]
-
   
+  const applyTheme = (t: string) => {
+    document.documentElement.className = t
+  }
+  
+   // Cargar tema guardado y aplicarlo
   useEffect(() => {
-    document.body.classList.remove(...THEMES)
-    document.body.classList.add(theme)
-  }, [theme])
+    const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
+    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
+    setTheme(initial)
+    applyTheme(initial)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
   
   const toggleTheme = () => {
     setTheme(theme === "theme-dark" ? "theme-light" : "theme-dark")
