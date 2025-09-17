@@ -1,28 +1,31 @@
+// src/components/navbar.tsx
 "use client"
 import Image from "next/image"
-import { Bell, Cog, Menu, Search, X, Moon, Sun } from "lucide-react"
-import { useState, useEffect } from "react"
+import { Bell, Cog, Menu, Search, X, Moon, Sun, User, LogOut } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
+import { signOut, useSession } from "next-auth/react" // NUEVO: Importamos useSession
 
 export default function Navbar() {
+  const { data: session } = useSession() // NUEVO: Obtenemos la sesión del usuario
   const [isOpen, setIsOpen] = useState(false)
   const [theme, setTheme] = useState("theme-dark")
+  const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+  const profileMenuRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
 
+  // ... (toda la lógica de los hooks se mantiene igual)
   const applyTheme = (t: string) => {
     document.documentElement.className = t
   }
 
-  // Cargar tema guardado y aplicarlo
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
     const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
     setTheme(initial)
     applyTheme(initial)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Guardar y aplicar al cambiar
   useEffect(() => {
     if (typeof window !== "undefined") {
       localStorage.setItem("theme", theme)
@@ -30,7 +33,6 @@ export default function Navbar() {
     applyTheme(theme)
   }, [theme])
 
-  // Sincronizar con otras pestañas
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === "theme" && (e.newValue === "theme-light" || e.newValue === "theme-dark")) {
@@ -42,12 +44,24 @@ export default function Navbar() {
     return () => window.removeEventListener("storage", onStorage)
   }, [])
 
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
+        setIsProfileMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [profileMenuRef]);
+
+
   const toggleTheme = () => {
     const newTheme = theme === "theme-dark" ? "theme-light" : "theme-dark"
     setTheme(newTheme)
   }
-
-  // Clase de link activo (usa tu color amarillo existente)
+  
   const linkClass = (href: string) =>
     pathname && pathname.startsWith(href)
       ? "text-[var(--yellow)]"
@@ -56,108 +70,94 @@ export default function Navbar() {
   return (
     <nav className="bg-skin-panel p-4 shadow-sm border-b border-border">
       <div className=" mx-auto flex items-center justify-between">
-        {/* Left: Logo */}
-        <div className="flex items-center space-x-2">
+        {/* ... (logo y navegación principal se mantienen igual) ... */}
+         <div className="flex items-center space-x-2">
           <a href="/dashboard" className="flex items-center space-x-2">
-            <Image src="/navbarIcon.svg" alt="BugRadar Logo" width={28} height={28} />
+            <Image src="/bugradar-logo.png" alt="BugRadar Logo" width={28} height={28} />
             <span className="text-skin-title font-semibold text-lg">BugRadar</span>
           </a>
           <ul className="hidden md:flex ml-5 items-center space-x-6 text-sm font-medium">
-            <li>
-              <a href="/dashboard" className={linkClass("/dashboard")}>
-                Dashboard
-              </a>
-            </li>
-            <li>
-              <a href="/stats" className={linkClass("/stats")}>
-                Stats
-              </a>
-            </li>
-            <li>
-              <a href="/insight" className={linkClass("/insight")}>
-                Insight
-              </a>
-            </li>
-            <li>
-              <a href="/settings" className={linkClass("/settings")}>
-                Settings
-              </a>
-            </li>
+            <li><a href="/dashboard" className={linkClass("/dashboard")}>Dashboard</a></li>
+            <li><a href="/stats" className={linkClass("/stats")}>Stats</a></li>
+            <li><a href="/insight" className={linkClass("/insight")}>Insight</a></li>
+            <li><a href="/settings" className={linkClass("/settings")}>Settings</a></li>
           </ul>
         </div>
 
-        {/* Middle: Search bar (always visible) */}
+        {/* ... (barra de búsqueda se mantiene igual) ... */}
         <div className="flex-1 px-4">
           <div className="relative max-w-md mx-auto">
-            <span className="absolute left-3 top-2.5 text-skin-subtitle">
-              <Search size={16} />
-            </span>
+            <span className="absolute left-3 top-2.5 text-skin-subtitle"><Search size={16} /></span>
             <input
               type="text"
               placeholder="Search logs..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-md
-                         bg-[var(--color-input)] text-skin-title
-                         border border-border
-                         placeholder:text-skin-subtitle
-                         focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
+              className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-[var(--color-input)] text-skin-title border border-border placeholder:text-skin-subtitle focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
             />
           </div>
         </div>
 
-        {/* Right: Icons, avatar, hamburger */}
+        {/* Derecha: Iconos y menú de perfil */}
         <div className="flex items-center space-x-4">
-          {/* Icons */}
-          <button className="text-skin-subtitle hover:text-[var(--primary)]">
-            <Bell size={20} />
-          </button>
-          <button className="text-skin-subtitle hover:text-[var(--primary)]">
-            <Cog size={20} />
-          </button>
-
-          {/* Theme toggle button */}
+          <button className="text-skin-subtitle hover:text-[var(--primary)]"><Bell size={20} /></button>
+          <a href="/settings" className="text-skin-subtitle hover:text-[var(--primary)]"><Cog size={20} /></a>
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full text-skin-subtitle hover:text-[var(--primary)] hover:bg-[var(--color-input)] transition-all duration-200"
             aria-label="Toggle theme"
           >
-            {theme === "theme-dark" ? (
-              <Sun size={20} className="text-[var(--yellow)]" />
-            ) : (
-              <Moon size={20} className="text-skin-title" />
-            )}
+            {theme === "theme-dark" ? <Sun size={20} className="text-[var(--yellow)]" /> : <Moon size={20} className="text-skin-title" />}
           </button>
 
-          {/* Avatar */}
-          <Image
-            src="/A1.jpg"
-            alt="User"
-            width={32}
-            height={32}
-            className="rounded-full border border-border"
-          />
+          {/* Contenedor del menú de perfil */}
+          <div className="relative" ref={profileMenuRef}>
+            <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}>
+              <Image
+                // NUEVO: Usamos la imagen de la sesión, con un fallback a la imagen por defecto.
+                src={session?.user?.image || "/A1.jpg"} 
+                alt="User Avatar"
+                width={32}
+                height={32}
+                className="rounded-full border border-border cursor-pointer bg-gray-500" // Añadimos un fondo por si la imagen tarda en cargar
+              />
+            </button>
+            
+            {isProfileMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-skin-panel border border-border rounded-md shadow-lg z-10">
+                <ul className="py-1">
+                  <li>
+                    <a href="/settings" className="flex items-center px-4 py-2 text-sm text-skin-title hover:bg-skin-bg">
+                      <User size={14} className="mr-2" />
+                      Cambiar foto
+                    </a>
+                  </li>
+                  <li>
+                    <button
+                      onClick={() => signOut({ callbackUrl: '/' })}
+                      className="flex items-center w-full text-left px-4 py-2 text-sm text-skin-title hover:bg-skin-bg"
+                    >
+                      <LogOut size={14} className="mr-2" />
+                      Cerrar Sesión
+                    </button>
+                  </li>
+                </ul>
+              </div>
+            )}
+          </div>
 
-          {/* Mobile menu toggle */}
+          {/* Menú móvil */}
           <button className="md:hidden text-skin-subtitle hover:text-skin-title" onClick={() => setIsOpen(!isOpen)}>
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* Mobile menu dropdown */}
-      {isOpen && (
+      {/* ... (el desplegable del menú móvil se mantiene igual) ... */}
+       {isOpen && (
         <div className="md:hidden mt-3 space-y-3 px-2">
-          <a href="/dashboard" className={`block font-medium ${linkClass("/dashboard")}`}>
-            Dashboard
-          </a>
-          <a href="/stats" className={`block ${linkClass("/stats")}`}>
-            Stats
-          </a>
-          <a href="/insight" className={`block ${linkClass("/insight")}`}>
-            Insight
-          </a>
-          <a href="/settings" className={`block ${linkClass("/settings")}`}>
-            Settings
-          </a>
+          <a href="/dashboard" className={`block font-medium ${linkClass("/dashboard")}`}>Dashboard</a>
+          <a href="/stats" className={`block ${linkClass("/stats")}`}>Stats</a>
+          <a href="/insight" className={`block ${linkClass("/insight")}`}>Insight</a>
+          <a href="/settings" className={`block ${linkClass("/settings")}`}>Settings</a>
         </div>
       )}
     </nav>

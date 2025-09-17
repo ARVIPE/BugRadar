@@ -7,9 +7,8 @@ import { SupabaseAdapter } from "@auth/supabase-adapter"
 import { createClient } from "@supabase/supabase-js"
 import type { AuthOptions } from "next-auth"
 
-// --- 1. Define tu configuración de Auth.js por separado ---
+// Definimos la configuración aquí mismo, en el archivo original.
 export const authConfig = {
-  // Aquí va toda tu configuración
   adapter: SupabaseAdapter({
     url: process.env.SUPABASE_URL as string,
     secret: process.env.SUPABASE_SERVICE_ROLE_KEY as string,
@@ -25,26 +24,33 @@ export const authConfig = {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
-
-        // Crea un cliente de Supabase solo para esta función
+        
         const supabase = createClient(
           process.env.SUPABASE_URL as string,
           process.env.SUPABASE_SERVICE_ROLE_KEY as string
         );
 
-        const { data, error } = await supabase.auth.signInWithPassword({
+        const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
           email: credentials.email as string,
           password: credentials.password as string,
-        })
-
-        if (error || !data.user) {
-          console.error("Supabase sign in error:", error?.message)
-          return null
-        }
+        });
         
+        if (authError || !authData.user) {
+          console.error("Supabase sign in error:", authError?.message);
+          return null;
+        }
+
+        const { data: userData, error: userError } = await supabase.auth.admin.getUserById(authData.user.id);
+        
+        if (userError || !userData.user) {
+            console.error("Supabase get user error:", userError?.message);
+            return null;
+        }
+
         return {
-          id: data.user.id,
-          email: data.user.email,
+          id: userData.user.id,
+          email: userData.user.email,
+          image: userData.user.user_metadata?.avatar_url, 
         };
       },
     }),
@@ -53,22 +59,55 @@ export const authConfig = {
     strategy: "jwt",
   },
   callbacks: {
+    // --- ESTA ES LA MODIFICACIÓN CLAVE ---
     async jwt({ token, user }) {
+      // Al iniciar sesión, 'user' existe. Guardamos los datos iniciales.
       if (user) {
         token.sub = user.id;
+        token.picture = user.image;
+        return token;
       }
+
+      // En las siguientes peticiones, 'user' no existe.
+      // Usamos el 'sub' (ID de usuario) del token para refrescar los datos.
+      if (!token.sub) return token;
+
+      const supabase = createClient(
+        process.env.SUPABASE_URL as string,
+        process.env.SUPABASE_SERVICE_ROLE_KEY as string
+      );
+      
+      try {
+        const { data: userData } = await supabase.auth.admin.getUserById(token.sub);
+        if (userData?.user) {
+           const avatarUrl = userData.user.user_metadata?.avatar_url;
+          if (avatarUrl) {
+          // Actualizamos el token con la URL de la imagen más reciente desde la BD
+          token.picture = `${avatarUrl}?v=${new Date().getTime()}`;
+          }else{
+            token.picture = null;
+          }
+        }
+      } catch (error) {
+        console.error("Error al refrescar los datos del usuario en el token:", error);
+      }
+
       return token;
     },
     async session({ session, token }) {
-      if (session.user && token.sub) {
-        session.user.id = token.sub;
+      if (session.user) {
+        if (token.sub) {
+          session.user.id = token.sub;
+        }
+        if (token.picture) {
+          session.user.image = token.picture as string | null | undefined;
+        }
       }
       return session;
     },
   },
 } satisfies AuthOptions;
 
-// --- 2. Inicializa NextAuth y exporta los handlers ---
 const handler = NextAuth(authConfig);
 
 export { handler as GET, handler as POST };

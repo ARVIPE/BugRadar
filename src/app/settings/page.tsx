@@ -1,3 +1,4 @@
+// src/app/settings/page.tsx
 "use client";
 
 import { useState } from "react";
@@ -6,26 +7,35 @@ import Footer from "@/components/footer";
 import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
+import AvatarUpload from "@/components/avatar-upload";
+import { useSession } from "next-auth/react";
 
 export default function SettingsPage() {
+  const { data: session } = useSession();
   const [darkMode, setDarkMode] = useState(true);
-  const [notificationEmail, setNotificationEmail] = useState("arvipe@hotmail.com");
+
+  // Usamos el email de la sesión como valor inicial
+  const [notificationEmail, setNotificationEmail] = useState(session?.user?.email || "");
   const [newEmail, setNewEmail] = useState("");
 
-  // Account info
-  const [username, setUsername] = useState("arvipe");
-  const [password, setPassword] = useState("12345678");
+  // Usamos el nombre de usuario de la sesión (si existe)
+  const [username, setUsername] = useState(session?.user?.name || "arvipe");
+  const [password, setPassword] = useState("••••••••"); // Mantenemos esto como placeholder
   const [showPassword, setShowPassword] = useState(false);
 
   const handleUpdateEmail = () => {
     if (newEmail.trim()) {
       setNotificationEmail(newEmail.trim());
       setNewEmail("");
+      // Aquí iría la lógica para actualizar el email en el backend
+      alert("Email actualizado (simulación)");
     }
   };
 
   const handleUpdateAccount = () => {
+    // Aquí iría la lógica para actualizar el nombre de usuario y la contraseña
     console.log("Updated account:", { username, password });
+    alert("Información de la cuenta guardada (simulación)");
   };
 
   return (
@@ -36,40 +46,40 @@ export default function SettingsPage() {
 
           {/* General Preferences */}
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
-            <h2 className="text-lg font-semibold text-skin-title">General Preferences</h2>
+            <h2 className="text-lg font-semibold text-skin-title">Preferencias Generales</h2>
             <p className="text-sm text-skin-subtitle">
-              Configure your application’s basic settings and display options.
+              Configura los ajustes básicos y las opciones de visualización de tu aplicación.
             </p>
 
             <div className="flex justify-between items-center">
-              <span className="text-skin-title">Dark Mode</span>
+              <span className="text-skin-title">Modo Oscuro</span>
               <Switch checked={darkMode} onCheckedChange={setDarkMode} />
             </div>
 
             <div className="flex justify-between items-center">
-              <span className="text-skin-title">Language</span>
+              <span className="text-skin-title">Idioma</span>
               <select
                 className="rounded px-2 py-1
                            bg-[var(--color-input)] text-skin-title
                            border border-border
                            focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
               >
+                <option>Español</option>
                 <option>English</option>
-                <option>Spanish</option>
               </select>
             </div>
           </section>
 
           {/* Notification Preferences */}
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
-            <h2 className="text-lg font-semibold text-skin-title">Notification Preferences</h2>
+            <h2 className="text-lg font-semibold text-skin-title">Preferencias de Notificación</h2>
             <p className="text-sm text-skin-subtitle">
-              Manage how and where you receive notifications for different BugRadar events.
+              Gestiona cómo y dónde recibes las notificaciones de los eventos de BugRadar.
             </p>
 
             <div className="space-y-4 text-sm">
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <span className="mb-1 sm:mb-0 font-medium text-skin-title">Current Email</span>
+                <span className="mb-1 sm:mb-0 font-medium text-skin-title">Email Actual</span>
                 <input
                   value={notificationEmail}
                   disabled
@@ -80,12 +90,12 @@ export default function SettingsPage() {
               </div>
 
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <span className="mb-1 sm:mb-0 text-skin-title">Change Email</span>
+                <span className="mb-1 sm:mb-0 text-skin-title">Cambiar Email</span>
                 <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                   <input
                     value={newEmail}
                     onChange={(e) => setNewEmail(e.target.value)}
-                    placeholder="Enter new email"
+                    placeholder="Introduce el nuevo email"
                     className="bg-[var(--color-input)] text-skin-title
                                placeholder:text-skin-subtitle
                                border border-border px-3 py-2 rounded
@@ -93,7 +103,7 @@ export default function SettingsPage() {
                                focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
                   />
                   <Button onClick={handleUpdateEmail} className="min-w-[130px]">
-                    Update Email
+                    Actualizar Email
                   </Button>
                 </div>
               </div>
@@ -102,14 +112,15 @@ export default function SettingsPage() {
 
           {/* Account Information */}
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
-            <h2 className="text-lg font-semibold text-skin-title">Account Information</h2>
+            <h2 className="text-lg font-semibold text-skin-title">Información de la Cuenta</h2>
             <p className="text-sm text-skin-subtitle">
-              Manage your personal information and password.
+              Gestiona tu información personal y tu contraseña.
             </p>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
+              <AvatarUpload />
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <span className="font-medium text-skin-title">Username</span>
+                <span className="font-medium text-skin-title">Nombre de usuario</span>
                 <input
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
@@ -119,9 +130,8 @@ export default function SettingsPage() {
                              focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
                 />
               </div>
-
               <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
-                <span className="font-medium text-skin-title">Password</span>
+                <span className="font-medium text-skin-title">Contraseña</span>
                 <div className="relative w-full sm:w-64">
                   <input
                     type={showPassword ? "text" : "password"}
@@ -142,32 +152,32 @@ export default function SettingsPage() {
               </div>
 
               <Button onClick={handleUpdateAccount} className="min-w-[140px]">
-                Save Changes
+                Guardar Cambios
               </Button>
             </div>
           </section>
 
           {/* Data Retention */}
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
-            <h2 className="text-lg font-semibold text-skin-title">Data Retention Policy</h2>
+            <h2 className="text-lg font-semibold text-skin-title">Política de Retención de Datos</h2>
             <p className="text-sm text-skin-subtitle">
-              Configure how long BugRadar retains your log and error data.
+              Configura durante cuánto tiempo BugRadar conserva tus logs y datos de errores.
             </p>
             <div className="flex justify-between items-center text-sm">
-              <span className="text-skin-title">Retention Period</span>
+              <span className="text-skin-title">Periodo de Retención</span>
               <select
                 className="rounded px-2 py-1
                            bg-[var(--color-input)] text-skin-title
                            border border-border
                            focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
               >
-                <option>30 Days</option>
-                <option>60 Days</option>
-                <option>90 Days</option>
+                <option>30 Días</option>
+                <option>60 Días</option>
+                <option>90 Días</option>
               </select>
             </div>
-            <p className="text-xs mt-2">
-              ⚠️ Changes to data retention policies may take up to 24 hours to take effect.
+            <p className="text-xs mt-2 text-skin-subtitle">
+              ⚠️ Los cambios en las políticas de retención de datos pueden tardar hasta 24 horas en aplicarse.
             </p>
           </section>
         </div>
