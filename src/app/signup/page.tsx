@@ -1,27 +1,29 @@
+// src/app/signup/page.tsx
 "use client"
 
 import Image from "next/image"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
-import { Moon, Sun } from "lucide-react"  // íconos cool
+import { Moon, Sun, AlertCircle } from "lucide-react"
+
+// Ya no necesitamos el cliente de Supabase aquí. ¡Más limpio!
 
 export default function SignupPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const [theme, setTheme] = useState("theme-dark")
 
-  const THEMES = ["theme-light", "theme-dark"]
-  
-  const applyTheme = (t: string) => {
+  // ... (tus hooks de tema se mantienen igual)
+    const applyTheme = (t: string) => {
     document.documentElement.className = t
   }
   
-   // Cargar tema guardado y aplicarlo
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
     const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
@@ -34,30 +36,56 @@ export default function SignupPage() {
     setTheme(theme === "theme-dark" ? "theme-light" : "theme-dark")
   }
 
-
-  const handleSignup = (e: any) => {
+  // --- Lógica de registro actualizada para llamar a nuestra API ---
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault()
+    setError(null)
 
     if (password !== confirmPassword) {
-      alert("Passwords don't match 🐞")
+      setError("Las contraseñas no coinciden 🐞")
       return
     }
 
-    console.log("User registered:", { email, password })
-    router.push("/dashboard")
+    setIsLoading(true)
+
+    try {
+      const response = await fetch('/api/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        // Si la API devuelve un error, lo mostramos
+        throw new Error(data.error || 'Algo salió mal.')
+      }
+
+      // ¡Éxito!
+      alert("¡Registro exitoso! Revisa tu email para confirmar tu cuenta.")
+      router.push("/") // Redirigimos al login
+
+    } catch (err: any) {
+      setError(err.message)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
     <div className={`min-h-screen flex items-center justify-center bg-skin-bg`}>
-      <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border border border-gray-700 max-w-xl w-full">
-         <button
+      <button
           onClick={toggleTheme}
           className="absolute top-4 right-4 p-2 rounded-full text-black transition-transform transform hover:scale-110"
           aria-label="Toggle theme"
         >
           {theme === "theme-dark" ? <Sun size={20} style={{ color: 'yellow' }} /> : <Moon size={20} style={{ color: 'black' }} />}
         </button>
-        <div className="w-full bg-skin-panel p-8 flex flex-col justify-center">
+      <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border border-gray-700 max-w-xl w-full bg-skin-panel relative">
+        <div className="w-full p-8 flex flex-col justify-center">
           <div className="flex flex-col items-center mb-6">
             <Image
               src={password ? "/bugradar-logo-eyesClosed.png" : "/bugradar-logo.png"}
@@ -66,11 +94,12 @@ export default function SignupPage() {
               height={100}
               className="rounded-full"
             />
-            <h1 className="text-2xl font-bold mt-4 text-skin-title">Create your BugRadar account</h1>
-            <p className="text-sm text-skin-subtitle">Monitor your apps. Catch bugs early. Sleep better.</p>
+            <h1 className="text-2xl font-bold mt-4 text-skin-title">Crea tu cuenta en BugRadar</h1>
+            <p className="text-sm text-skin-subtitle">Monitoriza tus apps. Atrapa bugs a tiempo. Duerme mejor.</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSignup}>
+            {/* ... (el resto del formulario JSX es el mismo) ... */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-skin-subtitle">
                 Email
@@ -78,16 +107,16 @@ export default function SignupPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="you@example.com"
+                placeholder="tu@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-300 dark:border-gray-700 focus:border-yellow-500 focus:ring-yellow-500"
+                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-600 focus:border-yellow-500 focus:ring-yellow-500"
               />
             </div>
 
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-skin-subtitle">
-                Password
+                Contraseña
               </label>
               <Input
                 id="password"
@@ -95,13 +124,13 @@ export default function SignupPage() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-300 dark:border-gray-700 focus:border-yellow-500 focus:ring-yellow-500"
+                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-600 focus:border-yellow-500 focus:ring-yellow-500"
               />
             </div>
 
             <div>
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-skin-subtitle">
-                Confirm Password
+                Confirmar Contraseña
               </label>
               <Input
                 id="confirmPassword"
@@ -109,27 +138,35 @@ export default function SignupPage() {
                 placeholder="••••••••"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-300 dark:border-gray-700 focus:border-yellow-500 focus:ring-yellow-500"
+                className="mt-1 w-full bg-skin-input text-skin-title border border-gray-600 focus:border-yellow-500 focus:ring-yellow-500"
               />
             </div>
+            
+            {error && (
+              <div className="flex items-center space-x-2 text-sm text-red-500 bg-red-500/10 p-3 rounded-md">
+                <AlertCircle className="h-5 w-5" />
+                <p>{error}</p>
+              </div>
+            )}
 
             <Button
               type="submit"
-              className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold transition-colors duration-300"
+              disabled={isLoading}
+              className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold transition-colors duration-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed"
             >
-              Sign Up
+              {isLoading ? 'Registrando...' : 'Registrarse'}
             </Button>
 
             <p className="mt-4 text-sm text-skin-subtitle text-center">
-              Already have an account?{" "}
+              ¿Ya tienes una cuenta?{" "}
               <a href="/" className="text-yellow-400 hover:underline">
-                Sign in
+                Inicia sesión
               </a>
             </p>
           </form>
 
           <p className="mt-8 text-xs text-skin-subtitle text-center italic">
-            "Bugs don't register themselves. Yet. 🐛"
+            "Los bugs no se registran solos. Todavía. 🐛"
           </p>
         </div>
       </div>
