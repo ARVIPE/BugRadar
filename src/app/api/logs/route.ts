@@ -1,53 +1,65 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
+import { NextResponse } from "next/server";
+import { createClient } from "@supabase/supabase-js";
+import { z } from "zod";
 
-export async function POST(request: Request) {
+const supabase = () =>
+  createClient(
+    process.env.SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false } }
+  );
+
+const LogSchema = z.object({
+  log_message: z.string().min(1),
+  container_name: z.string().min(1),
+  severity: z.enum(["info", "warning", "error"]),
+  user_id: z.string().uuid(),
+});
+
+export async function POST(req: Request) {
   try {
-    const body = await request.json();
-    const { log_message, container_name, severity, user_id } = body;
-
-    if (!log_message || !container_name || !severity || !user_id) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const body = await req.json();
+    const parsed = LogSchema.safeParse(body);
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
     }
 
-    const { data, error } = await supabase
-      .from('events')
-      .insert([{ log_message, container_name, severity, user_id }]);
+    const { data, error } = await supabase()
+      .from("events")
+      .insert([parsed.data])
+      .select("*")
+      .single();
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ message: 'Log added successfully', data }, { status: 201 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ ok: true, event: data }, { status: 201 });
+  } catch {
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
-export async function GET(request: Request) {
+export async function GET(req: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const containerName = searchParams.get('container_name');
-    const severity = searchParams.get('severity');
+    const { searchParams } = new URL(req.url);
+    const containerName = searchParams.get("container_name");
+    const severity = searchParams.get("severity");
+    const userId = searchParams.get("user_id");
+    const limit = Number(searchParams.get("limit") ?? 100);
 
-    let query = supabase.from('events').select('*');
+    let q = supabase()
+      .from("events")
+      .select("*")
+      .order("created_at", { ascending: false })
+      .limit(limit);
 
-    if (containerName) {
-      query = query.eq('container_name', containerName);
-    }
+    if (containerName) q = q.eq("container_name", containerName);
+    if (severity) q = q.eq("severity", severity);
+    if (userId) q = q.eq("user_id", userId);
 
-    if (severity) {
-      query = query.eq('severity', severity);
-    }
+    const { data, error } = await q;
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
-    const { data, error } = await query.order('created_at', { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json(data, { status: 200 });
-  } catch (error) {
-    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    return NextResponse.json({ items: data }, { status: 200 });
+  } catch {
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
