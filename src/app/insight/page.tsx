@@ -1,7 +1,8 @@
-"use client"
+"use client";
 
-import Navbar from "@/components/navbar"
-import Footer from "@/components/footer"
+import Navbar from "@/components/navbar";
+import Footer from "@/components/footer";
+import { useLatency, LatencyRecord } from "@/components/useLatency";
 import {
   BarChart,
   Bar,
@@ -10,24 +11,42 @@ import {
   Tooltip,
   ResponsiveContainer,
   CartesianGrid,
-} from "recharts"
+} from "recharts";
+import { useMemo } from "react";
 
-const latencyData = [
-  { path: "/login", latency: 120 },
-  { path: "/dashboard", latency: 340 },
-  { path: "/api/logs", latency: 280 },
-  { path: "/settings", latency: 190 },
-  { path: "/api/metrics", latency: 400 },
-]
+// Función para procesar los datos de latencia crudos
+function processLatencyData(data: LatencyRecord[] | null) {
+  if (!data) {
+    return { chartData: [], logData: [] };
+  }
 
-const latencyLogs = [
-  { timestamp: "2025-07-02 14:00:00", path: "/login", latency: 120 },
-  { timestamp: "2025-07-02 14:01:23", path: "/api/logs", latency: 280 },
-  { timestamp: "2025-07-02 14:03:10", path: "/dashboard", latency: 340 },
-  { timestamp: "2025-07-02 14:05:55", path: "/settings", latency: 190 },
-]
+  // Para el gráfico de barras: calcular la latencia media por endpoint
+  const averages: { [key: string]: { total: number; count: number } } = {};
+  for (const record of data) {
+    const key = `${record.method} ${record.endpoint}`;
+    if (!averages[key]) {
+      averages[key] = { total: 0, count: 0 };
+    }
+    averages[key].total += record.latency_ms;
+    averages[key].count += 1;
+  }
+
+  const chartData = Object.entries(averages).map(([key, { total, count }]) => ({
+    path: key,
+    latency: Math.round(total / count),
+  })).sort((a, b) => b.latency - a.latency); // Ordenar de más lento a más rápido
+
+  // Para la tabla: simplemente usar los datos más recientes
+  const logData = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+  return { chartData, logData };
+}
 
 export default function InsightPage() {
+  const { data: rawLatencyData, loading } = useLatency(15000); // Refrescar cada 15s
+
+  const { chartData, logData } = useMemo(() => processLatencyData(rawLatencyData), [rawLatencyData]);
+
   return (
     <>
       <Navbar />
@@ -38,63 +57,68 @@ export default function InsightPage() {
           {/* Chart Section */}
           <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
             <h2 className="text-lg font-semibold mb-4 text-skin-title">
-              Average Latency per Endpoint (ms)
+              Average Latency per Endpoint (ms, last 24h)
             </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <BarChart data={latencyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="None" />
-                <XAxis dataKey="path" stroke="var(--color-subtitle)" fontSize={12} />
-                <YAxis stroke="var(--color-subtitle)" fontSize={12} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-panel)",
-                    borderColor: "var(--border)",
-                    borderWidth: 1,
-                    color: "var(--color-title)",
-                    fontSize: "0.8rem",
-                  }}
-                  labelStyle={{ color: "var(--color-title)" }}
-                  itemStyle={{ color: "var(--color-title)" }}
-                />
-                <Bar dataKey="latency" fill="var(--yellow)" radius={[6, 6, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
+            {loading && !chartData.length ? (
+              <div className="flex justify-center items-center h-[300px]">Loading chart...</div>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis dataKey="path" stroke="var(--color-subtitle)" fontSize={12} interval={0} angle={-30} textAnchor="end" height={80} />
+                  <YAxis stroke="var(--color-subtitle)" fontSize={12} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "var(--color-panel)",
+                      borderColor: "var(--border)",
+                      color: "var(--color-title)",
+                    }}
+                  />
+                  <Bar dataKey="latency" fill="var(--yellow)" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
 
           {/* Table Section */}
           <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
-            <h2 className="text-lg font-semibold mb-4 text-skin-title">Recent Latency Logs</h2>
-
-            <div className="overflow-x-auto">
-              <table className="min-w-full text-sm">
-                <thead className="text-skin-subtitle border-b border-border">
-                  <tr>
-                    <th className="text-left py-2 px-4">Timestamp</th>
-                    <th className="text-left py-2 px-4">Path</th>
-                    <th className="text-left py-2 px-4">Latency (ms)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {latencyLogs.map((log, i) => (
-                    <tr
-                      key={i}
-                      className="border-b border-border hover:bg-skin-bg transition-colors"
-                    >
-                      <td className="py-2 px-4 text-skin-title">{log.timestamp}</td>
-                      <td className="py-2 px-4 text-skin-title">{log.path}</td>
-                      <td className="py-2 px-4">
-                        <span className="font-medium text-[var(--yellow)]">{log.latency} ms</span>
-                      </td>
+            <h2 className="text-lg font-semibold mb-4 text-skin-title">Recent Latency Checks</h2>
+            {loading && !logData.length ? (
+              <div className="text-center py-4">Loading logs...</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full text-sm">
+                  <thead className="text-skin-subtitle border-b border-border">
+                    <tr>
+                      <th className="text-left py-2 px-4">Timestamp</th>
+                      <th className="text-left py-2 px-4">Endpoint</th>
+                      <th className="text-left py-2 px-4">Status</th>
+                      <th className="text-left py-2 px-4">Latency (ms)</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
+                  </thead>
+                  <tbody>
+                    {logData.slice(0, 20).map((log, i) => ( // Mostrar solo los últimos 20
+                      <tr key={i} className="border-b border-border hover:bg-skin-bg transition-colors">
+                        <td className="py-2 px-4 text-skin-title">{new Date(log.created_at).toLocaleString()}</td>
+                        <td className="py-2 px-4 font-mono">{log.method} {log.endpoint}</td>
+                        <td className="py-2 px-4">
+                          <span className={log.status_code >= 400 ? "text-destructive" : "text-emerald-400"}>
+                            {log.status_code}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4">
+                          <span className="font-medium text-[var(--yellow)]">{log.latency_ms} ms</span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
       </div>
       <Footer />
     </>
-  )
+  );
 }

@@ -1,29 +1,68 @@
 import json, os, random, sys, time, socket, datetime as dt, threading
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 
 # ============== HEALTHCHECK SERVER (FLASK) ==============
 # Simula un servicio que a veces falla para probar el uptime.
 
 app = Flask(__name__)
-IS_HEALTHY = True  # Estado global de salud
 
+# --- Endpoints de ejemplo ---
 @app.route('/health')
 def health_check():
-    # 80% de las veces funciona, 20% falla
+    """Endpoint de salud para el uptime."""
     is_ok = random.choices([True, False], weights=[80, 20])[0]
     if is_ok:
         return jsonify({"status": "ok"}), 200
     else:
         return jsonify({"status": "error"}), 500
 
+@app.route('/api/users', methods=['GET'])
+def get_users():
+    """Simula una lectura de BBDD."""
+    time.sleep(random.uniform(0.05, 0.15))
+    return jsonify([{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}])
+
+@app.route('/api/products/<int:product_id>', methods=['GET'])
+def get_product(product_id):
+    """Simula una lectura con latencia variable."""
+    time.sleep(random.uniform(0.1, 0.3))
+    return jsonify({"id": product_id, "name": f"Product {product_id}", "price": 99.9})
+
+@app.route('/api/orders', methods=['POST'])
+def create_order():
+    """Simula una escritura con posible fallo."""
+    time.sleep(random.uniform(0.2, 0.5))
+    if random.random() < 0.1:
+        return jsonify({"error": "Internal server error"}), 500
+    return jsonify({"status": "created", "order_id": random.randint(1000, 2000)}), 201
+
+
+# --- Endpoint de introspección para el agente ---
+@app.route('/debug/routes')
+def list_routes():
+    """Lista todos los endpoints para que el agente los descubra."""
+    output = []
+    for rule in app.url_map.iter_rules():
+        # Excluimos las rutas de debug/internas y las estáticas
+        if rule.endpoint.startswith(('static', 'list_routes')):
+            continue
+        # Solo nos interesan los métodos que no sean HEAD, OPTIONS
+        methods = sorted([m for m in rule.methods if m not in ('HEAD', 'OPTIONS')])
+        if not methods:
+            continue
+        output.append({
+            "rule": str(rule),
+            "methods": methods
+        })
+    return jsonify(output)
+
+
 def run_flask_app():
-    # Werkzeug es ruidoso, así que deshabilitamos su log por defecto
     import logging
     log = logging.getLogger('werkzeug')
     log.setLevel(logging.ERROR)
     app.run(host='0.0.0.0', port=5000)
 
-# Iniciar Flask en un hilo demonio para que no bloquee el script principal
 threading.Thread(target=run_flask_app, daemon=True).start()
 
 
