@@ -1,16 +1,46 @@
 # agent/agent.py
 import docker
 import time
+import requests
+import json
 
-# Palabras clave que indican un error
+# Palabras clave que indican un error o una advertencia
 ERROR_KEYWORDS = ["error", "exception", "traceback", "failed", "critical"]
+WARNING_KEYWORDS = ["warning", "warn", "deprecated"]
+
+# URL del endpoint de la API
+API_URL = "http://localhost:3000/api/logs"
+
+def get_severity(log_line):
+    """Determina la severidad de un log."""
+    line_lower = log_line.lower()
+    if any(keyword in line_lower for keyword in ERROR_KEYWORDS):
+        return "error"
+    if any(keyword in line_lower for keyword in WARNING_KEYWORDS):
+        return "warning"
+    return "info"
+
+def send_log_to_api(log_message, container_name, severity, user_id):
+    """Envía un log al dashboard a través de la API."""
+    payload = {
+        "log_message": log_message,
+        "container_name": container_name,
+        "severity": severity,
+        "user_id": user_id
+    }
+    try:
+        response = requests.post(API_URL, json=payload)
+        if response.status_code == 201:
+            print(f"  ✅ Log enviado con éxito al dashboard.")
+        else:
+            print(f"  ❌ Error al enviar el log: {response.status_code} - {response.text}")
+    except requests.exceptions.RequestException as e:
+        print(f"  ❌ Error de conexión al enviar el log: {e}")
 
 def connect_to_docker():
     """Se conecta al daemon de Docker."""
     try:
-        # Intenta conectarse usando la configuración por defecto (socket local)
         client = docker.from_env()
-        # Comprueba si la conexión funciona
         client.ping()
         print("✅ Conexión con Docker establecida con éxito.")
         return client
@@ -40,22 +70,20 @@ def select_container(client):
         except ValueError:
             print("Por favor, introduce un número.")
 
-def monitor_logs(container):
-    """Monitoriza los logs de un contenedor en tiempo real."""
+def monitor_logs(container, user_id):
+    """Monitoriza los logs de un contenedor en tiempo real y los envía a la API."""
     print(f"\n🚀 Empezando a monitorizar los logs de '{container.name}' en tiempo real...")
     print(" (Pulsa Ctrl+C para detener)")
 
-    # Obtenemos los logs en streaming (en vivo)
     try:
         for log_line in container.logs(stream=True, follow=True, tail=10):
             line = log_line.decode('utf-8').strip()
-            print(f"  [LOG] {line}")
+            severity = get_severity(line)
+            
+            print(f"  [LOG] Severity: {severity} - {line}")
 
-            # Comprobamos si la línea contiene alguna palabra clave de error
-            if any(keyword in line.lower() for keyword in ERROR_KEYWORDS):
-                print(f"  🐞 ¡ERROR DETECTADO! -> {line}")
-                # Aquí es donde, en el futuro, enviaremos el error a la API
-                # send_error_to_api(line)
+            # Enviar el log a la API
+            send_log_to_api(line, container.name, severity, user_id)
 
     except KeyboardInterrupt:
         print("\n🛑 Monitorización detenida por el usuario.")
@@ -67,4 +95,5 @@ if __name__ == "__main__":
     if docker_client:
         selected_container = select_container(docker_client)
         if selected_container:
-            monitor_logs(selected_container)
+            user_id = input("\nIntroduce tu ID de usuario para asociar los logs: ")
+            monitor_logs(selected_container, user_id)
