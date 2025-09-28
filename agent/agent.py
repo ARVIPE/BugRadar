@@ -14,12 +14,16 @@ import requests
 
 API_URL = os.getenv("BUGRADAR_API_URL", "http://localhost:3000/api/logs")  # POST logs
 STATUS_API_URL = os.getenv("BUGRADAR_STATUS_API_URL", "http://localhost:3000/api/status")  # POST status
+UPTIME_API_URL = os.getenv("BUGRADAR_UPTIME_API_URL", "http://localhost:3000/api/uptime") # POST uptime
+UPTIME_TARGET_URL = os.getenv("BUGRADAR_UPTIME_TARGET_URL") # GET target for uptime check
+
 USER_ID = os.getenv("BUGRADAR_USER_ID", "")  # UUID del usuario/propietario
 
 MONITOR_CONTAINERS = os.getenv("BUGRADAR_CONTAINERS", "")  # CSV de nombres; vacío = todos
 TAIL = int(os.getenv("BUGRADAR_TAIL", "100"))              # cuántas líneas históricas traerse
 PARSE_JSON = os.getenv("BUGRADAR_PARSE_JSON", "1") == "1"  # si el log es JSON {"level": "...", "msg": "..."}
 HEARTBEAT_EVERY = int(os.getenv("BUGRADAR_HEARTBEAT_EVERY", "60"))  # seg
+UPTIME_EVERY = int(os.getenv("BUGRADAR_UPTIME_EVERY", "60")) # seg
 
 # Palabras clave (fallback cuando no hay JSON "level" fiable)
 ERROR_KEYWORDS = ["error", "exception", "traceback", "failed", "critical", "panic", "fatal"]
@@ -119,6 +123,14 @@ def send_status_to_api(container_name: str, status: str):
         "user_id": USER_ID or None
     }
     http_post(STATUS_API_URL, payload)
+
+def send_uptime_to_api(uptime_percent: int):
+    payload = {
+        "uptime_percent": uptime_percent,
+        "user_id": USER_ID or None
+    }
+    http_post(UPTIME_API_URL, payload)
+
 
 # =============== DOCKER ===============
 
@@ -230,6 +242,46 @@ def monitor_container_status(client):
     except Exception as e:
         print(f"❌ Error en stream de eventos: {e}")
 
+# =============== MONITORIZACIÓN DE UPTIME ===============
+
+def check_uptime():
+    """
+    Hace un ping HTTP a UPTIME_TARGET_URL y envía el resultado a la API.
+    100% si es 2xx, 0% en cualquier otro caso.
+    """
+    if not UPTIME_TARGET_URL:
+        return
+
+    print(f"⏱️  Haciendo ping a {UPTIME_TARGET_URL} para medir uptime…")
+    try:
+        r = requests.get(UPTIME_TARGET_URL, timeout=10)
+        if r.status_code >= 200 and r.status_code < 300:
+            print(f"  ✅ Uptime check OK ({r.status_code})")
+            send_uptime_to_api(100)
+        else:
+            print(f"  ❌ Uptime check FAILED ({r.status_code})")
+            send_uptime_to_api(0)
+    except requests.RequestException as e:
+        print(f"  ❌ Uptime check FAILED ({e})")
+        send_uptime_to_api(0)
+
+def uptime_loop():
+    if not UPTIME_TARGET_URL:
+        debug("No se ha configurado BUGRADAR_UPTIME_TARGET_URL, el monitor de uptime está desactivado.")
+        return
+    
+    print("⏱️  Iniciando monitor de uptime…")
+    while True:
+        try:
+            check_uptime()
+            time.sleep(UPTIME_EVERY)
+        except KeyboardInterrupt:
+            break
+        except Exception as e:
+            print(f"❌ Error en loop de uptime: {e}")
+            time.sleep(UPTIME_EVERY)
+
+
 # =============== MAIN ===============
 
 def main():
@@ -242,6 +294,9 @@ def main():
 
     # Hilo de estado
     threading.Thread(target=monitor_container_status, args=(client,), daemon=True).start()
+
+    # Hilo de uptime
+    threading.Thread(target=uptime_loop, daemon=True).start()
 
     # Hilos de logs
     stop_evt = start_logs_threads(client)

@@ -67,7 +67,7 @@ export default function Dashboard() {
             <h2 className="text-sm font-medium text-skin-subtitle">System Uptime</h2>
             <RefreshCcw className="absolute top-5 right-5 w-5 h-5 text-skin-subtitle" />
             <p className="mt-2 text-2xl font-bold text-skin-title">
-              {data?.uptime.toFixed(2)}%
+              {data?.uptime}%
             </p>
           </div>
         </section>
