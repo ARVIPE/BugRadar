@@ -84,18 +84,6 @@ export default function Navbar() {
           </ul>
         </div>
 
-        {/* ... (barra de búsqueda se mantiene igual) ... */}
-        <div className="flex-1 px-4">
-          <div className="relative max-w-md mx-auto">
-            <span className="absolute left-3 top-2.5 text-skin-subtitle"><Search size={16} /></span>
-            <input
-              type="text"
-              placeholder="Search logs..."
-              className="w-full pl-9 pr-3 py-2 text-sm rounded-md bg-[var(--color-input)] text-skin-title border border-border placeholder:text-skin-subtitle focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
-            />
-          </div>
-        </div>
-
         {/* Derecha: Iconos y menú de perfil */}
         <div className="flex items-center space-x-4">
           <button className="text-skin-subtitle hover:text-[var(--primary)]"><Bell size={20} /></button>

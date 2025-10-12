@@ -28,14 +28,10 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 mb-6">
           <h1 className="text-3xl font-bold text-skin-title">Dashboard Overview</h1>
-          <Button className="h-10 w-[140px]" onClick={onRefresh} disabled={refreshing}>
-            <RotateCw className="mr-2 h-4 w-4" />
-            {refreshing ? "Refreshing..." : "Refresh data"}
-          </Button>
         </div>
 
         {/* KPIs (mismo HTML, solo reemplazo números) */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
           <div className="relative bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5 h-[126px]">
             <h2 className="text-sm font-medium text-skin-subtitle">Active Errors</h2>
             <Bug className="absolute top-5 right-5 w-5 h-5 text-skin-subtitle" />
@@ -63,13 +59,6 @@ export default function Dashboard() {
             <p className="mt-1 text-xs text-emerald-600">live</p>
           </div>
 
-          <div className="relative bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5 h-[126px]">
-            <h2 className="text-sm font-medium text-skin-subtitle">System Uptime</h2>
-            <RefreshCcw className="absolute top-5 right-5 w-5 h-5 text-skin-subtitle" />
-            <p className="mt-2 text-2xl font-bold text-skin-title">
-              {data?.uptime}%
-            </p>
-          </div>
         </section>
 
         <LogStream />
