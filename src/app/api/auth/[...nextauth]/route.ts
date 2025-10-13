@@ -51,6 +51,7 @@ export const authConfig = {
           id: userData.user.id,
           email: userData.user.email,
           image: userData.user.user_metadata?.avatar_url, 
+          supabaseAccessToken: authData.session?.access_token,
         };
       },
     }),
@@ -65,6 +66,7 @@ export const authConfig = {
       if (user) {
         token.sub = user.id;
         token.picture = user.image;
+        token.supabaseAccessToken = user.supabaseAccessToken;
         return token;
       }
 
@@ -103,6 +105,7 @@ export const authConfig = {
           session.user.image = token.picture as string | null | undefined;
         }
       }
+      session.supabaseAccessToken = token.supabaseAccessToken;
       return session;
     },
   },

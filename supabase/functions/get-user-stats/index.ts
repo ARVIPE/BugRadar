@@ -1,55 +1,74 @@
 // supabase/functions/get-user-stats/index.ts
-// VERSIÓN DE DEPURACIÓN MÁXIMA
 
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { corsHeaders } from '../_shared/cors.ts'
 
-console.log('[DEBUG] Nivel superior: El fichero de la función ha sido cargado por el runtime.')
+// Helper function to get user from JWT
+async function getUser(supabase: SupabaseClient, req: Request) {
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) {
+    throw new Error('Missing Authorization header')
+  }
+  const jwt = authHeader.replace('Bearer ', '')
+  const { data: { user }, error } = await supabase.auth.getUser(jwt)
+  if (error) {
+    throw new Error('Invalid JWT')
+  }
+  return user
+}
 
 Deno.serve(async (req) => {
-  console.log(`[DEBUG] Handler Invocado: Recibida una petición ${req.method} a ${req.url}`)
-
   if (req.method === 'OPTIONS') {
-    console.log('[DEBUG] Petición OPTIONS recibida. Devolviendo cabeceras CORS.')
     return new Response('ok', { headers: corsHeaders })
   }
 
-  // Pega esto dentro de Deno.serve(async (req) => { ... })
+  try {
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+    )
 
-try {
-    console.log('[DEBUG] AISLAMIENTO: Verificando secrets...');
-    const supabaseUrl = Deno.env.get('SUPABASE_URL');
-    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    // Although we use admin client for RPC calls, 
+    // we first validate the user's JWT to secure the endpoint.
+    await getUser(supabaseAdmin, req)
 
-    if (!supabaseUrl || !serviceKey) throw new Error("Secrets no encontrados.");
+    // Perform RPC calls to get statistics
+    const [
+      { data: dailySignups, error: dailySignupsError },
+      { data: totalLogins, error: totalLoginsError },
+      { data: growthRate, error: growthRateError },
+    ] = await Promise.all([
+      supabaseAdmin.rpc('get_daily_signups'),
+      supabaseAdmin.rpc('get_total_logins_last_7_days'),
+      supabaseAdmin.rpc('get_user_growth_rate'),
+    ])
 
-    console.log('[DEBUG] AISLAMIENTO: Creando cliente...');
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey);
-
-    console.log('[DEBUG] AISLAMIENTO: Llamando a get_total_logins_last_7_days...');
-    const { data, error } = await supabaseAdmin.rpc('get_total_logins_last_7_days');
-
-    if (error) {
-        // Si hay un error, lo lanzamos para que se capture abajo
-        throw error;
+    if (dailySignupsError || totalLoginsError || growthRateError) {
+      console.error({
+        dailySignupsError,
+        totalLoginsError,
+        growthRateError,
+      })
+      throw new Error('One or more database RPC calls failed.')
     }
 
-    console.log('[DEBUG] AISLAMIENTO: Llamada exitosa. Resultado:', data);
+    const weeklyNewUsers = dailySignups?.reduce((acc, day) => acc + (day.users || 0), 0) || 0;
 
-    return new Response(JSON.stringify({ logins: data }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 200,
-    });
+    const stats = {
+      weeklyNewUsers: weeklyNewUsers,
+      dailySignups: dailySignups ?? [],
+      totalLogins: totalLogins ?? 0,
+      growthRate: growthRate ?? 0.0,
+    }
 
-} catch (error) {
-    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-    console.error('!!!      ERROR CAPTURADO EN MODO AISLADO      !!!');
-    console.error('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!');
-    console.error('[DEBUG] Error completo:', error);
-    
+    return new Response(JSON.stringify(stats), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+  } catch (error) {
     return new Response(JSON.stringify({ error: error.message }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 500,
-    });
-}
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
 })

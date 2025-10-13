@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react"
-import { Users, TrendingUp, LogIn } from "lucide-react" // Importamos nuevos iconos
+import { useSession } from "next-auth/react" // Import useSession
+import { Users, TrendingUp, LogIn } from "lucide-react"
 import {
   ResponsiveContainer,
   LineChart,
@@ -15,41 +15,38 @@ import {
   CartesianGrid,
 } from "recharts"
 
-// El estado inicial para nuestros datos
 const initialStats = {
   weeklyNewUsers: 0,
   dailySignups: [],
   totalLogins: 0,
   growthRate: 0.0,
 }
+
 export default function StatsPage() {
   const [stats, setStats] = useState(initialStats)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const supabase = useSupabaseClient()
-  // --- 2. USA EL HOOK 'useUser' ---
-  // Este hook se asegura de que tenemos la información del usuario tan pronto como esté disponible.
-  const user = useUser()
+  const { data: session, status } = useSession() // Use the useSession hook
 
   useEffect(() => {
-    // --- 3. CONDICIÓN DE GUARDA ---
-    // Si la información del usuario aún no ha cargado, no hagas nada todavía.
-    // El 'useEffect' se volverá a ejecutar cuando 'user' cambie.
-      if (!user) {
-      console.log("useEffect se detuvo porque no hay usuario.");
-      return;
+    if (status === 'loading') {
+      setLoading(true)
+      return
+    }
+
+    if (status === 'unauthenticated' || !session?.supabaseAccessToken) {
+      setLoading(false)
+      return
     }
 
     const fetchStats = async () => {
+      setLoading(true)
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        if (!session) throw new Error("Could not get session")
-
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-user-stats`,
           {
-            headers: { 'Authorization': `Bearer ${session.access_token}` },
+            headers: { 'Authorization': `Bearer ${session.supabaseAccessToken}` },
           }
         )
         if (!response.ok) {
@@ -68,7 +65,9 @@ export default function StatsPage() {
       }
     }
     fetchStats()
-  }, [user, supabase]) 
+  }, [session, status]) 
+
+  const isAuthenticated = status === 'authenticated';
 
   return (
     <>
@@ -80,7 +79,7 @@ export default function StatsPage() {
           {loading && <p className="text-center">Loading statistics...</p>}
           {error && <p className="text-red-500">Error: {error}</p>}
 
-          {!loading && !error && (
+          {!loading && !error && isAuthenticated && (
             <>
               {/* Summary Cards */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -133,6 +132,15 @@ export default function StatsPage() {
                 </ResponsiveContainer>
               </div>
             </>
+          )}
+          {!loading && !error && !isAuthenticated && (
+            <div className="text-center bg-skin-panel border border-border rounded-lg shadow-elev-1 p-10">
+                <h2 className="text-xl font-semibold mb-4">Access Denied</h2>
+                <p className="text-skin-subtitle mb-6">You need to be logged in to view these statistics.</p>
+                <a href="/login" className="bg-yellow-500 text-white font-bold py-2 px-4 rounded hover:bg-yellow-600 transition-colors">
+                    Go to Login
+                </a>
+            </div>
           )}
         </div>
       </div>
