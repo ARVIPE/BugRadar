@@ -1,8 +1,10 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { User, BarChart2, Users } from "lucide-react"
+import { useSupabaseClient, useUser } from "@supabase/auth-helpers-react"
+import { Users, TrendingUp, LogIn } from "lucide-react" // Importamos nuevos iconos
 import {
   ResponsiveContainer,
   LineChart,
@@ -13,84 +15,125 @@ import {
   CartesianGrid,
 } from "recharts"
 
-const userStats = [
-  { date: "Jul 20", users: 120 },
-  { date: "Jul 21", users: 135 },
-  { date: "Jul 22", users: 162 },
-  { date: "Jul 23", users: 181 },
-  { date: "Jul 24", users: 170 },
-  { date: "Jul 25", users: 195 },
-  { date: "Jul 26", users: 230 },
-]
-
+// El estado inicial para nuestros datos
+const initialStats = {
+  weeklyNewUsers: 0,
+  dailySignups: [],
+  totalLogins: 0,
+  growthRate: 0.0,
+}
 export default function StatsPage() {
+  const [stats, setStats] = useState(initialStats)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const supabase = useSupabaseClient()
+  // --- 2. USA EL HOOK 'useUser' ---
+  // Este hook se asegura de que tenemos la información del usuario tan pronto como esté disponible.
+  const user = useUser()
+
+  useEffect(() => {
+    // --- 3. CONDICIÓN DE GUARDA ---
+    // Si la información del usuario aún no ha cargado, no hagas nada todavía.
+    // El 'useEffect' se volverá a ejecutar cuando 'user' cambie.
+      if (!user) {
+      console.log("useEffect se detuvo porque no hay usuario.");
+      return;
+    }
+
+    const fetchStats = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) throw new Error("Could not get session")
+
+        const response = await fetch(
+          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-user-stats`,
+          {
+            headers: { 'Authorization': `Bearer ${session.access_token}` },
+          }
+        )
+        if (!response.ok) {
+          throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`)
+        }
+        const data = await response.json()
+        setStats(data)
+      } catch (err) {
+        if (err instanceof Error) {
+          setError(err.message)
+        } else {
+          setError("An unknown error occurred")
+        }
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [user, supabase]) 
+
   return (
     <>
       <Navbar />
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-6xl mx-auto space-y-10">
-          <h1 className="text-3xl font-bold mb-6">User Statistics</h1>
+          <h1 className="text-3xl font-bold mb-6">User & Business Statistics</h1>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-            <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm text-skin-subtitle">Active Users</h2>
-                <User className="text-skin-subtitle" size={18} />
+          {loading && <p className="text-center">Loading statistics...</p>}
+          {error && <p className="text-red-500">Error: {error}</p>}
+
+          {!loading && !error && (
+            <>
+              {/* Summary Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                
+                {/* TARJETA DE USUARIOS SEMANALES */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">New Users This Week</h2>
+                    <Users className="text-skin-subtitle" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.weeklyNewUsers}</p>
+                  <p className="text-xs text-skin-subtitle">Last 7 days</p>
+                </div>
+
+                {/* NUEVA TARJETA: LOGINS TOTALES */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">Total Logins This Week</h2>
+                    <LogIn className="text-skin-subtitle" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.totalLogins}</p>
+                  <p className="text-xs text-skin-subtitle">Platform activity</p>
+                </div>
+
+                {/* NUEVA TARJETA: CRECIMIENTO MENSUAL */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">User Growth (MoM)</h2>
+                    <TrendingUp className="text-skin-subtitle" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.growthRate}%</p>
+                  <p className="text-xs text-skin-subtitle">vs. Previous 30 days</p>
+                </div>
               </div>
-              <p className="text-2xl font-bold mt-2 text-skin-title">1,238</p>
-              <p className="text-xs text-emerald-500">+5.2% vs last week</p>
-            </div>
 
-            <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm text-skin-subtitle">New Users This Week</h2>
-                <Users className="text-skin-subtitle" size={18} />
+              {/* GRÁFICO DE ACTIVIDAD */}
+              <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
+                <h2 className="text-lg font-semibold mb-4 text-skin-title">
+                  User Signups – Last 7 Days
+                </h2>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={stats.dailySignups}>
+                    {/* ... (el resto del gráfico no cambia) ... */}
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="date" stroke="#aaa" fontSize={12} />
+                    <YAxis stroke="#aaa" fontSize={12} allowDecimals={false} />
+                    <Tooltip contentStyle={{ backgroundColor: "var(--color-panel)", borderColor: "var(--border)" }}/>
+                    <Line type="monotone" dataKey="users" stroke="var(--yellow)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                  </LineChart>
+                </ResponsiveContainer>
               </div>
-              <p className="text-2xl font-bold mt-2 text-skin-title">172</p>
-              <p className="text-xs text-emerald-500">+12.8% growth</p>
-            </div>
-
-            <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-              <div className="flex items-center justify-between">
-                <h2 className="text-sm text-skin-subtitle">Roles Used</h2>
-                <BarChart2 className="text-skin-subtitle" size={18} />
-              </div>
-              <p className="text-sm mt-2 text-skin-title">
-                Admin (33%) – Developer (55%) – Viewer (12%)
-              </p>
-            </div>
-          </div>
-
-          {/* User Activity Chart */}
-          <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
-            <h2 className="text-lg font-semibold mb-4 text-skin-title">
-              User Signups – Last 7 Days
-            </h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={userStats}>
-                <CartesianGrid strokeDasharray="3 3" stroke="none" />
-                <XAxis dataKey="date" stroke="#aaa" />
-                <YAxis stroke="#aaa" />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "var(--color-panel)",
-                    borderColor: "var(--border)",
-                    fontSize: "0.75rem",
-                    color: "var(--color-title)",
-                  }}
-                  labelStyle={{ color: "var(--color-title)" }}
-                  itemStyle={{ color: "var(--color-title)" }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="users"
-                  stroke="var(--yellow)"
-                  strokeWidth={2}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+            </>
+          )}
         </div>
       </div>
       <Footer />
