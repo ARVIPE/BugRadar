@@ -46,6 +46,8 @@ export default function InsightPage() {
   const { data: rawLatencyData, loading } = useLatency(15000); // Refrescar cada 15s
 
   const { chartData, logData } = useMemo(() => processLatencyData(rawLatencyData), [rawLatencyData]);
+   // La página se considera "vacía" si no está cargando y no hay datos crudos.
+  const isEmpty = !loading && (!rawLatencyData || rawLatencyData.length === 0);
 
   return (
     <>
@@ -53,6 +55,15 @@ export default function InsightPage() {
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-6xl mx-auto space-y-8">
           <h1 className="text-3xl font-bold">Request Latency</h1>
+           {/* Estado Vacío */}
+          {isEmpty && (
+            <div className="bg-skin-panel p-8 rounded-lg border border-border text-center text-skin-subtitle">
+              <h2 className="font-semibold text-lg text-skin-title">No Endpoints Available</h2>
+              <p className="mt-2 text-sm">
+                Latency monitoring is only applicable for services with web interfaces or APIs.
+              </p>
+            </div>
+          )}
 
           {/* Chart Section */}
           <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
