@@ -20,7 +20,7 @@ services:
       BUGRADAR_LATENCY_API_URL: "http://host.docker.internal:3000/api/latency"
       BUGRADAR_UPTIME_TARGET_URL: "http://bugradar-noisy:5000/health"
       BUGRADAR_LATENCY_TARGET_URL: "http://bugradar-noisy:5000"
-      BUGRADAR_USER_ID: "25df85fe-2c35-4241-96f9-7c72cc7d90ab"
+      BUGRADAR_USER_ID: "f13fb1f9-131a-4fde-892a-6ac4b0acd220"
       BUGRADAR_CONTAINERS: "bugradar-noisy"   # lee solo la ruidosa
       BUGRADAR_TAIL: "50"
       BUGRADAR_PARSE_JSON: "1"

@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
+import { Resend } from "resend";
+import { getNotifyEmailFor } from "@/app/settings/actions";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const supabase = () =>
   createClient(
@@ -31,8 +35,35 @@ export async function POST(req: Request) {
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    if (parsed.data.severity === 'error') {
+      try {
+        const userEmail = await getUserEmailById(parsed.data.user_id);
+
+        if (userEmail) {
+          const notifyEmail = await getNotifyEmailFor(userEmail);
+
+          await resend.emails.send({
+            from: 'bugradar.noreply@resend.dev',
+            to: notifyEmail,
+            subject: `🚨 Error detectado en ${parsed.data.container_name}`,
+            html: `<p>Se ha detectado un nuevo error:</p>
+                   <pre>${parsed.data.log_message}</pre>
+                   <p>Contenedor: ${parsed.data.container_name}</p>`,
+          });
+          console.log(`Correo de error enviado a ${notifyEmail} (usuario: ${userEmail})`);
+        } else {
+          console.warn(`Usuario con ID ${parsed.data.user_id} no encontrado. No se enviará notificación.`);
+        }
+
+      } catch (emailError) {
+        console.error("Error al enviar email de notificación:", emailError);
+      }
+    }
+
     return NextResponse.json({ ok: true, event: data }, { status: 201 });
-  } catch {
+  } catch (error) {
+    console.error("Error in POST /api/logs:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -59,7 +90,21 @@ export async function GET(req: Request) {
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
     return NextResponse.json({ items: data }, { status: 200 });
-  } catch {
+  } catch (error) {
+    console.error("Error in GET /api/logs:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
+}
+
+async function getUserEmailById(userId: string): Promise<string | null> {
+  const adminSupabase = createClient(
+    process.env.SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data, error } = await adminSupabase.auth.admin.getUserById(userId);
+  if (error || !data.user) {
+    console.error(`Error fetching user ${userId}:`, error);
+    return null;
+  }
+  return data.user.email ?? null;
 }
