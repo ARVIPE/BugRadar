@@ -96,4 +96,4 @@ while True:
         "host": socket.gethostname(),
     }
     print(json.dumps(payload), flush=True)
-    time.sleep(10)
+    time.sleep(600)
