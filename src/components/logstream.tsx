@@ -97,7 +97,7 @@ export default function LogStream() {
           x.container_name.toLowerCase().includes(q) ||
           x.severity.toLowerCase().includes(q) ||
           (x.status ?? "open").toLowerCase().includes(q) ||
-          new Date(x.created_at).toISOString().toLowerCase().includes(q)
+          new Date(x.created_at).toLocaleDateString('en-GB').toLowerCase().includes(q.toLowerCase())
       );
     }
     return base;
@@ -133,17 +133,6 @@ export default function LogStream() {
                      placeholder:text-skin-subtitle text-skin-title
                      focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--ring)]"
         />
-        <div className="flex items-center gap-2 self-end md:self-auto">
-          <button className="text-sm border border-border text-skin-title px-3 py-1.5 rounded-md hover:bg-skin-bg">
-            Service
-          </button>
-          <button className="text-sm border border-border text-skin-title px-3 py-1.5 rounded-md hover:bg-skin-bg">
-            Severity
-          </button>
-          <button className="text-sm border border-border text-skin-title px-3 py-1.5 rounded-md hover:bg-skin-bg">
-            Timeframe
-          </button>
-        </div>
       </div>
 
       {/* Tabs */}
