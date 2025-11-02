@@ -14,6 +14,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
+import { set } from "zod";
 
 type EventItem = {
   id: string;
@@ -34,21 +35,21 @@ export default function DetailPage() {
   const [saving, setSaving] = useState<null | "resolve" | "ignore">(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
-  // Demo data (igual que tu maqueta original)
-  const data = [
-    { date: "Jul 20", value: 6 },
-    { date: "Jul 21", value: 8 },
-    { date: "Jul 22", value: 12 },
-    { date: "Jul 23", value: 15 },
-    { date: "Jul 24", value: 11 },
-    { date: "Jul 25", value: 18 },
-    { date: "Jul 26", value: 24 },
-  ];
+  const [recurrenceData, setRecurrenceData] = useState<RecurrenceData[]>([]);
+  const [chartLoading, setChartLoading] = useState(true);
+
+  type RecurrenceData = {
+    date: string;
+    value: number;
+  };
+
 
   useEffect(() => {
     let mounted = true;
 
     const load = async () => {
+      setLoading(true);
+      setChartLoading(true);
       try {
         const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Not found");
@@ -56,16 +57,33 @@ export default function DetailPage() {
         if (!mounted) return;
         setEvent(ev);
 
+        try {
+          const recurrenceRes = await fetch(
+            `/api/recurrence?log_message=${encodeURIComponent(ev.log_message)}`,
+            { cache: "no-store" }
+          );
+          if (recurrenceRes.ok) {
+            const chartData: RecurrenceData[] = await recurrenceRes.json();
+            if(mounted){
+              setRecurrenceData(chartData);
+            }
+          }
+        } catch (chartError) {
+          console.error("Failed to load recurrence data", chartError);
+          if(mounted) setRecurrenceData([]);
+        } finally {
+          if (mounted) setChartLoading(false);
+        }
         // Cargar relacionados por mismo contenedor
-        const relRes = await fetch(
-          `/api/logs?container_name=${encodeURIComponent(ev.container_name)}&limit=10`,
-          { cache: "no-store" }
-        );
+        const relRes = await fetch(`/api/logs?log_message=${encodeURIComponent(ev.log_message)}&limit=10`,
+        { cache: "no-store" });
         const relJson = await relRes.json();
+        // Filtramos el evento actual (esto sigue igual)
         const others: EventItem[] = (relJson.items ?? []).filter((x: EventItem) => x.id !== ev.id);
         setRelated(others.slice(0, 3));
       } catch (e) {
         setEvent(null);
+        setChartLoading(false);
       } finally {
         if (mounted) setLoading(false);
       }
@@ -148,9 +166,6 @@ export default function DetailPage() {
                     ? "Loading…"
                     : "Details extracted from the log message below. (Enhance later with stack trace parsing)."}
                 </p>
-                <Button className="text-sm">
-                  <Code size={16} className="mr-2" /> View Stack Trace
-                </Button>
 
                 {/* Mensaje crudo */}
                 {!loading && (
@@ -165,8 +180,17 @@ export default function DetailPage() {
                 <h2 className="text-lg font-semibold mb-1 text-skin-title">Recurrence History</h2>
                 <p className="text-sm text-skin-subtitle mb-4">Occurrences over the last 7 days</p>
                 <div className="flex-grow min-h-[300px]">
+                  {chartLoading ? (
+                    <div className="flex items-center justify-center h-full text-skin-subtitle">
+                      Loading chart…
+                      </div>
+                  ) : recurrenceData.length === 0 ? (
+                    <div className="flex items-center justify-center h-full text-skin-subtitle">
+                      No recurrence data available.
+                    </div>
+                  ) : (
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={data}>
+                    <LineChart data={recurrenceData}>
                       <XAxis dataKey="date" stroke="var(--color-subtitle)" fontSize={12} />
                       <YAxis stroke="var(--color-subtitle)" fontSize={12} />
                       <Tooltip
@@ -194,6 +218,7 @@ export default function DetailPage() {
                       />
                     </LineChart>
                   </ResponsiveContainer>
+                  )}
                 </div>
               </div>
             </div>

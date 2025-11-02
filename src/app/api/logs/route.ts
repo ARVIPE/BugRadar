@@ -74,6 +74,7 @@ export async function GET(req: Request) {
     const containerName = searchParams.get("container_name");
     const severity = searchParams.get("severity");
     const userId = searchParams.get("user_id");
+    const logMessage = searchParams.get("log_message");
     const limit = Number(searchParams.get("limit") ?? 100);
 
     let q = supabase()
