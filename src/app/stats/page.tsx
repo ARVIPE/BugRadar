@@ -3,23 +3,18 @@
 import { useState, useEffect } from "react"
 import Navbar from "@/components/navbar"
 import Footer from "@/components/footer"
-import { useSession } from "next-auth/react" // Import useSession
-import { Users, TrendingUp, LogIn } from "lucide-react"
-import {
-  ResponsiveContainer,
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  Tooltip,
-  CartesianGrid,
-} from "recharts"
+import { useSession } from "next-auth/react"
+import { ShieldAlert, ShieldCheck, Users, AlertTriangle, TrendingUp } from "lucide-react"
+import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
 
 const initialStats = {
-  weeklyNewUsers: 0,
-  dailySignups: [],
-  totalLogins: 0,
-  growthRate: 0.0,
+  totalErrors: 0,
+  totalWarnings: 0,
+  uptime: 0,
+  mtbf: "0.00",
+  errorRate: "0.00",
+  warningRate: "0.00",
+  logVolume: [],
 }
 
 export default function StatsPage() {
@@ -27,7 +22,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const { data: session, status } = useSession() // Use the useSession hook
+  const { data: session, status } = useSession()
 
   useEffect(() => {
     if (status === 'loading') {
@@ -35,7 +30,7 @@ export default function StatsPage() {
       return
     }
 
-    if (status === 'unauthenticated' || !session?.supabaseAccessToken) {
+    if (status === 'unauthenticated') {
       setLoading(false)
       return
     }
@@ -43,12 +38,7 @@ export default function StatsPage() {
     const fetchStats = async () => {
       setLoading(true)
       try {
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/get-user-stats`,
-          {
-            headers: { 'Authorization': `Bearer ${session.supabaseAccessToken}` },
-          }
-        )
+        const response = await fetch("/api/noisy-app-stats")
         if (!response.ok) {
           throw new Error(`Network response was not ok: ${response.status} ${response.statusText}`)
         }
@@ -65,7 +55,7 @@ export default function StatsPage() {
       }
     }
     fetchStats()
-  }, [session, status]) 
+  }, [status]) 
 
   const isAuthenticated = status === 'authenticated';
 
@@ -74,7 +64,7 @@ export default function StatsPage() {
       <Navbar />
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-6xl mx-auto space-y-10">
-          <h1 className="text-3xl font-bold mb-6">User & Business Statistics</h1>
+          <h1 className="text-3xl font-bold mb-6">"Noisy App" Statistics</h1>
 
           {loading && <p className="text-center">Loading statistics...</p>}
           {error && <p className="text-red-500">Error: {error}</p>}
@@ -82,53 +72,73 @@ export default function StatsPage() {
           {!loading && !error && isAuthenticated && (
             <>
               {/* Summary Cards */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 
-                {/* TARJETA DE USUARIOS SEMANALES */}
+                {/* UPTIME */}
                 <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm text-skin-subtitle">New Users This Week</h2>
-                    <Users className="text-skin-subtitle" size={18} />
+                    <h2 className="text-sm text-skin-subtitle">Uptime</h2>
+                    <ShieldCheck className="text-green-500" size={18} />
                   </div>
-                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.weeklyNewUsers}</p>
-                  <p className="text-xs text-skin-subtitle">Last 7 days</p>
+                  <p className={`text-2xl font-bold mt-2 text-green-500`}>{stats.uptime}%</p>
+                  <p className="text-xs text-skin-subtitle">Last 24 hours</p>
                 </div>
 
-                {/* NUEVA TARJETA: LOGINS TOTALES */}
+                {/* MTBF */}
                 <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm text-skin-subtitle">Total Logins This Week</h2>
-                    <LogIn className="text-skin-subtitle" size={18} />
-                  </div>
-                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.totalLogins}</p>
-                  <p className="text-xs text-skin-subtitle">Platform activity</p>
-                </div>
-
-                {/* NUEVA TARJETA: CRECIMIENTO MENSUAL */}
-                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-                  <div className="flex items-center justify-between">
-                    <h2 className="text-sm text-skin-subtitle">User Growth (MoM)</h2>
+                    <h2 className="text-sm text-skin-subtitle">Mean Time Between Failures (MTBF)</h2>
                     <TrendingUp className="text-skin-subtitle" size={18} />
                   </div>
-                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.growthRate}%</p>
-                  <p className="text-xs text-skin-subtitle">vs. Previous 30 days</p>
+                  <p className="text-2xl font-bold mt-2 text-skin-title">{stats.mtbf} minutes</p>
+                  <p className="text-xs text-skin-subtitle">Based on error logs</p>
+                </div>
+
+                {/* TOTAL ERRORS */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">Total Errors</h2>
+                    <AlertTriangle className="text-red-500" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-red-500">{stats.totalErrors}</p>
+                  <p className="text-xs text-skin-subtitle">Last 24 hours</p>
+                </div>
+
+                {/* ERROR RATE */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">Error Rate</h2>
+                    <TrendingUp className="text-skin-subtitle" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-red-500">{stats.errorRate}%</p>
+                  <p className="text-xs text-skin-subtitle">Last 24 hours</p>
+                </div>
+
+                {/* WARNING RATE */}
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">Warning Rate</h2>
+                    <TrendingUp className="text-skin-subtitle" size={18} />
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-yellow-500">{stats.warningRate}%</p>
+                  <p className="text-xs text-skin-subtitle">Last 24 hours</p>
                 </div>
               </div>
 
-              {/* GRÁFICO DE ACTIVIDAD */}
+              {/* Log Volume Chart */}
               <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
                 <h2 className="text-lg font-semibold mb-4 text-skin-title">
-                  User Signups – Last 7 Days
+                  Log Volume – Last 7 Days
                 </h2>
                 <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={stats.dailySignups}>
-                    {/* ... (el resto del gráfico no cambia) ... */}
+                  <BarChart data={stats.logVolume}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="date" stroke="#aaa" fontSize={12} />
                     <YAxis stroke="#aaa" fontSize={12} allowDecimals={false} />
                     <Tooltip contentStyle={{ backgroundColor: "var(--color-panel)", borderColor: "var(--border)" }}/>
-                    <Line type="monotone" dataKey="users" stroke="var(--yellow)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
-                  </LineChart>
+                    <Bar dataKey="errors" stackId="a" fill="var(--red)" />
+                    <Bar dataKey="warnings" stackId="a" fill="var(--yellow)" />
+                  </BarChart>
                 </ResponsiveContainer>
               </div>
             </>
