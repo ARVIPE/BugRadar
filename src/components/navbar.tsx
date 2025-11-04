@@ -21,7 +21,8 @@ export default function Navbar() {
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
-    const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
+   // const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
+    const initial = "theme-dark"
     setTheme(initial)
     applyTheme(initial)
   }, [])
@@ -86,15 +87,16 @@ export default function Navbar() {
 
         {/* Derecha: Iconos y menú de perfil */}
         <div className="flex items-center space-x-4">
-          <button className="text-skin-subtitle hover:text-[var(--primary)]"><Bell size={20} /></button>
+          {/*<button className="text-skin-subtitle hover:text-[var(--primary)]"><Bell size={20} /></button>*/}
           <a href="/settings" className="text-skin-subtitle hover:text-[var(--primary)]"><Cog size={20} /></a>
+           {/*
           <button
             onClick={toggleTheme}
             className="p-2 rounded-full text-skin-subtitle hover:text-[var(--primary)] hover:bg-[var(--color-input)] transition-all duration-200"
             aria-label="Toggle theme"
           >
             {theme === "theme-dark" ? <Sun size={20} className="text-[var(--yellow)]" /> : <Moon size={20} className="text-skin-title" />}
-          </button>
+          </button>*/}
 
           {/* Contenedor del menú de perfil */}
           <div className="relative" ref={profileMenuRef}>

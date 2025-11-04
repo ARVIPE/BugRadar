@@ -76,13 +76,13 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-skin-bg transition-colors">
-      <button
+      {/*<button
         onClick={toggleTheme}
         className="absolute top-4 right-4 p-2 rounded-full text-black transition-transform transform hover:scale-110"
         aria-label="Toggle theme"
       >
         {theme === "theme-dark" ? <Sun size={20} style={{ color: 'yellow' }} /> : <Moon size={20} style={{ color: 'black' }} />}
-      </button>
+      </button>*/}
 
       <div className="flex flex-col shadow-2xl rounded-2xl overflow-hidden border border-gray-700 max-w-xl w-full bg-skin-panel relative">
         <div className="w-full p-8 flex flex-col justify-center">
