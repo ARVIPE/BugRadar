@@ -1,27 +1,42 @@
-// src/middleware.ts
-import { withAuth } from "next-auth/middleware"
+// [Updated file: src/middleware.ts]
+import { withAuth, NextRequestWithAuth } from "next-auth/middleware";
+import { NextResponse } from "next/server";
 
-export default withAuth({
-  pages: {
-    signIn: '/', // Redirige a los usuarios a la página de login (tu ruta raíz)
+export default withAuth(
+  function middleware(request: NextRequestWithAuth) {
+    const { pathname } = request.nextUrl;
+    const { token } = request.nextauth;
+
+    // If logged in and trying to access root or signup, redirect to projects
+    if (token && (pathname === "/" || pathname === "/signup")) {
+      return NextResponse.redirect(new URL("/projects", request.url));
+    }
+
+    // New Rule: If trying to access dashboard, check for a project cookie/header
+    // For simplicity, we'll just redirect to /projects if they hit dashboard directly.
+    // The /projects page will be responsible for setting the selection.
+    if (token && pathname.startsWith("/dashboard")) {
+      // A real app would check localStorage, but middleware can't.
+      // So we'll let the dashboard page itself handle the redirect
+      // if it finds no project is selected. This is simpler.
+    }
   },
-})
+  {
+    pages: {
+      signIn: "/", 
+    },
+    callbacks: {
+      authorized: ({ token }) => !!token,
+    },
+  }
+);
 
 export const config = {
-  // El matcher define qué rutas quieres proteger
+  // Update matcher to protect the new /projects route as well
   matcher: [
-    /*
-     * Coincide con todas las rutas de solicitud excepto las siguientes:
-     * - / (la página de inicio de sesión)
-     * - /signup (la página de registro)
-     * - api (rutas de API)
-     * - _next/static (archivos estáticos)
-     * - _next/image (archivos de optimización de imágenes)
-     * - favicon.ico (el ícono de la pestaña)
-     *
-     * El '?!' es un "negative lookahead" en la expresión regular.
-     * Básicamente, le dice: "protege todo lo que NO empiece por...".
-     */
-    '/((?!api|_next/static|_next/image|favicon.ico|signup).*)',
+    "/((?!api|_next/static|_next/image|favicon.ico|signup).*)",
+    "/dashboard/:path*",
+    "/settings/:path*",
+    "/projects/:path*", // Protect this new page
   ],
-}
+};

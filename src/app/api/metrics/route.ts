@@ -1,7 +1,9 @@
-// src/app/api/metrics/route.ts
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authConfig } from "@/app/api/auth/[...nextauth]/route"; // Importa tu config de auth
 import { createClient } from "@supabase/supabase-js";
 
+// Tu patrón de cliente admin
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -9,71 +11,77 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-type StatusEv = { container_name: string; status: "up"|"down"|"heartbeat"; created_at: string };
-
-function computeUptime(events: StatusEv[], windowStart: number, windowEnd: number) {
-  const evs = [...events].sort((a,b)=> new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-  if (evs.length === 0) return 0;
-  let lastTs = windowStart, isUp = false, upMs = 0;
-  for (let i = evs.length - 1; i >= 0; i--) {
-    const t = new Date(evs[i].created_at).getTime();
-    if (t < windowStart) { isUp = (evs[i].status === "up" || evs[i].status === "heartbeat"); break; }
+export async function GET(req: Request) {
+  // 1. Obtener sesión del usuario
+  const session = await getServerSession(authConfig);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-  for (const ev of evs) {
-    const t = new Date(ev.created_at).getTime();
-    if (t < windowStart) continue;
-    if (t > windowEnd) break;
-    if (isUp) upMs += t - lastTs;
-    isUp = ev.status === "down" ? false : (ev.status === "up" || ev.status === "heartbeat" ? true : isUp);
-    lastTs = t;
-  }
-  if (isUp) upMs += windowEnd - Math.max(lastTs, windowStart);
-  const total = Math.max(0, windowEnd - windowStart);
-  return total ? Math.max(0, Math.min(100, (upMs/total)*100)) : 0;
-}
 
-export async function GET() {
+  // 2. Obtener el project_id
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("project_id");
+
+  if (!projectId) {
+    return NextResponse.json({ error: "project_id is required" }, { status: 400 });
+  }
+
+  const db = supabase();
+
+  // 3. Comprobación de Seguridad
+  const { data: projectData, error: projectError } = await db
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", session.user.id)
+    .single();
+
+  if (projectError || !projectData) {
+    return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+  }
+  // --- Fin de Comprobación ---
+
   try {
     const now = new Date();
-    const today = new Date(now); today.setHours(0,0,0,0);
-    const oneHourAgo = new Date(now); oneHourAgo.setHours(now.getHours() - 1);
+    const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
+    const todayStart = new Date(now.setHours(0, 0, 0, 0)).toISOString();
 
-    // KPIs (solo status='open')
-    const [errorsRes, warnsRes, lastHourRes] = await Promise.all([
-      supabase().from("events").select("*", { count: "exact", head: true }).eq("severity","error").eq("status","open"),
-      supabase().from("events").select("*", { count: "exact", head: true }).eq("severity","warning").eq("status","open").gte("created_at", today.toISOString()),
-      supabase().from("events").select("*", { count: "exact", head: true }).eq("status","open").gte("created_at", oneHourAgo.toISOString()),
-    ]);
+    // 4. Añadir .eq('project_id', projectId) a TODAS las queries
+    
+    // Active Errors (asumiendo que 'status' = 'open' existe en tu tabla 'events')
+    const { count: activeErrors, error: errorsError } = await db
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .eq('severity', 'error')
+      .eq('status', 'open'); // (Si no usas 'status', cámbialo por 'is' o quítalo)
+    if (errorsError) throw errorsError;
 
-    // Uptime (24h): lee status_events y calcula
-    const windowMs = 24 * 60 * 60 * 1000;
-    const startIso = new Date(Date.now() - windowMs).toISOString();
-    const { data: statusRows } = await supabase()
-      .from("status_events")
-      .select("container_name,status,created_at")
-      .gte("created_at", startIso)
-      .order("created_at", { ascending: true });
+    // Warnings Today
+    const { count: warningsToday, error: warningsError } = await db
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .eq('severity', 'warning')
+      .gte('created_at', todayStart);
+    if (warningsError) throw warningsError;
 
-   // (solo el trozo del uptime)
-    let uptime = 0;
-    try {
-      const res = await fetch("http://localhost:3000/api/uptime", { cache: "no-store" });
-      if (res.ok) {
-        const j = await res.json();
-        uptime = typeof j.uptime === "number" ? j.uptime : 0;
-      }
-    } catch {
-      uptime = 0;
-    }
-
+    // Logs Last Hour
+    const { count: logsLastHour, error: logsError } = await db
+      .from('events')
+      .select('*', { count: 'exact', head: true })
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .gte('created_at', oneHourAgo);
+    if (logsError) throw logsError;
 
     return NextResponse.json({
-      activeErrors: errorsRes.count ?? 0,
-      warningsToday: warnsRes.count ?? 0,
-      logsLastHour: lastHourRes.count ?? 0,
-      uptime,
+      activeErrors: activeErrors ?? 0,
+      warningsToday: warningsToday ?? 0,
+      logsLastHour: logsLastHour ?? 0,
     });
-  } catch (e) {
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+
+  } catch (error: any) {
+    console.error("Error fetching metrics:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

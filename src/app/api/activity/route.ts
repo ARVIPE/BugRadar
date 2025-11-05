@@ -1,7 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authConfig } from "@/app/api/auth/[...nextauth]/route"; // Importa tu config de auth
+import { createClient } from "@supabase/supabase-js";
 
-// Un tipo para unificar los diferentes flujos de actividad
+// Tu patrón de cliente admin (Service Role)
+const supabase = () =>
+  createClient(
+    process.env.SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false } }
+  );
+
+// (El tipo ActivityItem se queda igual)
 type ActivityItem = {
   id: string;
   timestamp: string;
@@ -12,77 +22,95 @@ type ActivityItem = {
   user_email?: string | null;
 }
 
-// Cliente de Supabase con Service Role (como en /api/latency)
-const supabase = () =>
-  createClient(
-    process.env.SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-    { auth: { persistSession: false } }
-  );
-
-export async function GET() {
-  const db = supabase(); // Usamos el cliente de servicio
-  const activityLimit = 5; // Cuántos items de actividad mostrar
-  const lookbackDays = 3; // Cuántos días atrás buscar (para no escanear toda la BBDD)
+export async function GET(req: Request) {
+  // 1. Obtener sesión del usuario (tu método)
+  const session = await getServerSession(authConfig);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   
+  // 2. Obtener el project_id desde la URL
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("project_id");
+
+  if (!projectId) {
+    return new NextResponse(
+      JSON.stringify({ message: "project_id is required" }),
+      { status: 400 }
+    );
+  }
+
+  const db = supabase();
+  
+  // 3. Comprobación de Seguridad (Opcional pero Recomendado)
+  // Asegurarnos de que el usuario logueado es dueño de este proyecto
+  const { data: projectData, error: projectError } = await db
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", session.user.id)
+    .single();
+
+  if (projectError || !projectData) {
+    return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+  }
+  // --- Fin de Comprobación ---
+
+  const activityLimit = 5;
+  const lookbackDays = 3;
   const sinceDate = new Date();
   sinceDate.setDate(sinceDate.getDate() - lookbackDays);
   const sinceISO = sinceDate.toISOString();
 
   try {
-    // 1. Obtener los eventos creados más recientes (nuevos errores/warnings)
+    // 4. Añadir .eq('project_id', projectId) a TODAS las queries
     const { data: newEvents, error: newEventsError } = await db
       .from('events')
       .select('id, created_at, severity, container_name, log_message')
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
       .order('created_at', { ascending: false })
       .limit(activityLimit);
 
     if (newEventsError) throw newEventsError;
 
-    // 2. Obtener los eventos resueltos más recientes
     const { data: resolvedEvents, error: resolvedError } = await db
       .from('events')
-      // CORRECCIÓN: Se quitó el (email) que fallaba. Ahora solo traemos el UUID.
       .select('id, severity, container_name, resolved_at, resolved_by')
-      .gt('resolved_at', sinceISO) // Solo resueltos recientemente
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .gt('resolved_at', sinceISO)
       .order('resolved_at', { ascending: false })
       .limit(activityLimit);
 
     if (resolvedError) throw resolvedError;
 
-    // 3. Obtener los eventos ignorados más recientes
     const { data: ignoredEvents, error: ignoredError } = await db
       .from('events')
-      // CORRECCIÓN: Se quitó el (email) que fallaba. Ahora solo traemos el UUID.
       .select('id, severity, container_name, ignored_at, ignored_by')
-      .gt('ignored_at', sinceISO) // Solo ignorados recientemente
+      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .gt('ignored_at', sinceISO)
       .order('ignored_at', { ascending: false })
       .limit(activityLimit);
     
     if (ignoredError) throw ignoredError;
 
-    // 4. NUEVO PASO: Obtener los emails de los usuarios
-    // Recopilamos todos los IDs de usuario únicos de los eventos
+    // --- El resto de tu lógica (buscar emails) es correcta ---
+    
     const userIds = new Set<string>();
     resolvedEvents.forEach(e => { if (e.resolved_by) userIds.add(e.resolved_by) });
     ignoredEvents.forEach(e => { if (e.ignored_by) userIds.add(e.ignored_by) });
 
     const emailMap = new Map<string, string>();
     if (userIds.size > 0) {
-      // Consultamos la tabla pública 'users' para encontrar los emails
       const { data: users, error: userError } = await db
-        .from('users') // Asumiendo que tu tabla pública de usuarios se llama 'users'
+        .from('users') // Asumiendo que tu tabla pública de perfiles se llama 'users'
         .select('id, email')
         .in('id', Array.from(userIds));
 
       if (userError) throw userError;
       
-      // Creamos un mapa de ID -> email para buscar rápido
       users.forEach(u => emailMap.set(u.id, u.email));
     }
 
-
-    // 5. Formatear y unificar todas las actividades
     const activities: ActivityItem[] = [];
 
     newEvents.forEach(event => activities.push({
@@ -95,7 +123,6 @@ export async function GET() {
     }));
 
     resolvedEvents.forEach(event => {
-      // CORRECCIÓN: Usamos el emailMap para buscar el email
       const email = event.resolved_by ? emailMap.get(event.resolved_by) || 'Usuario (ID: ...' + event.resolved_by.slice(-4) + ')' : 'Sistema';
       activities.push({
         id: event.id,
@@ -107,7 +134,6 @@ export async function GET() {
     });
 
     ignoredEvents.forEach(event => {
-      // CORRECCIÓN: Usamos el emailMap para buscar el email
       const email = event.ignored_by ? emailMap.get(event.ignored_by) || 'Usuario (ID: ...' + event.ignored_by.slice(-4) + ')' : 'Sistema';
       activities.push({
         id: event.id,
@@ -118,10 +144,7 @@ export async function GET() {
       });
     });
 
-    // 6. Ordenar todas las actividades por fecha (más reciente primero)
     activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-
-    // 7. Devolver solo el límite de actividad
     const finalActivities = activities.slice(0, activityLimit);
     
     return NextResponse.json(finalActivities);
@@ -134,4 +157,3 @@ export async function GET() {
     );
   }
 }
-

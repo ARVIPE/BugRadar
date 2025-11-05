@@ -15,15 +15,16 @@ services:
       context: ./agent
     container_name: bugradar-agent
     environment:
+      BUGRADAR_API_KEY: "proj_bb6047d9345541a7b9f2a6056c41d284"
       BUGRADAR_API_URL: "http://host.docker.internal:3000/api/logs"
       BUGRADAR_UPTIME_API_URL: "http://host.docker.internal:3000/api/uptime"
       BUGRADAR_LATENCY_API_URL: "http://host.docker.internal:3000/api/latency"
       BUGRADAR_UPTIME_TARGET_URL: "http://bugradar-noisy:5000/health"
       BUGRADAR_LATENCY_TARGET_URL: "http://bugradar-noisy:5000"
-      BUGRADAR_USER_ID: "f13fb1f9-131a-4fde-892a-6ac4b0acd220"
-      BUGRADAR_CONTAINERS: "bugradar-noisy"   # lee solo la ruidosa
+      BUGRADAR_CONTAINERS: "bugradar-noisy" 
       BUGRADAR_TAIL: "50"
       BUGRADAR_PARSE_JSON: "1"
+      PYTHONUNBUFFERED: "1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     depends_on:

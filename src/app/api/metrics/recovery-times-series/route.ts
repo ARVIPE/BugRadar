@@ -1,98 +1,74 @@
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authConfig } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
 
-// Definición del tipo de dato para el gráfico
-type ChartDataPoint = {
-  date: string;
-  value: number; // Promedio de horas
-  dateObj: Date; // Para ordenar
-};
-
-// Definición del tipo de evento de la BBDD
-type Event = {
-  created_at: string;
-  resolved_at: string;
-};
-
+// Tu patrón de cliente admin
 const supabase = () =>
-    createClient(
-        process.env.SUPABASE_URL as string,
-        process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-        { auth: { persistSession: false } }
-    );
+  createClient(
+    process.env.SUPABASE_URL as string,
+    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    { auth: { persistSession: false } }
+  );
 
+export async function GET(req: Request) {
+  // 1. Obtener sesión del usuario
+  const session = await getServerSession(authConfig);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-export async function GET() {
+  // 2. Obtener el project_id
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("project_id");
+
+  if (!projectId) {
+    return NextResponse.json({ error: "project_id is required" }, { status: 400 });
+  }
+
+  const db = supabase();
+
+  // 3. Comprobación de Seguridad
+  const { data: projectData, error: projectError } = await db
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", session.user.id)
+    .single();
+
+  if (projectError || !projectData) {
+    return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+  }
+  // --- Fin de Comprobación ---
+
   try {
-    // 1. Calcular la fecha de hace 7 días
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    sevenDaysAgo.setHours(0, 0, 0, 0); // Empezar desde el inicio del día
-
-    // 2. Consultar a Supabase por eventos resueltos en los últimos 7 días
-    const { data: events, error } = await supabase()
-      .from('events')
-      .select('created_at, resolved_at')
-      .eq('status', 'resolved') // Solo los resueltos
-      .gte('resolved_at', sevenDaysAgo.toISOString()); // En el rango de fechas
+    // 4. LLAMAR A LA FUNCIÓN RPC (sigue llamándose igual)
+    const { data, error } = await db.rpc('get_project_recovery_stats', {
+      project_id_param: projectId
+    });
 
     if (error) {
-      console.error('Error fetching recovery time series:', error);
+      console.error("Error llamando a RPC get_project_recovery_stats:", error);
       throw error;
     }
 
-    // 3. Procesar los datos para el gráfico
-    const dailyStats: Record<string, { totalHours: number; count: number, dateObj: Date }> = {};
+    // 5. Formatear los datos para la gráfica
+    // --- CAMBIO AQUÍ ---
+    const chartData = data.map((d: { date: string, avg_recovery_minutes: number }) => ({
+      date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      // Leemos la nueva columna 'avg_recovery_minutes'
+      value: parseFloat(d.avg_recovery_minutes.toFixed(2)) 
+    }));
+    // --- FIN DEL CAMBIO ---
 
-    events.forEach((event: Event) => {
-      // Asegurarse de que los campos necesarios existen
-      if (event.created_at && event.resolved_at) {
-        const createdAt = new Date(event.created_at);
-        const resolvedAt = new Date(event.resolved_at);
-
-        // Calcular la diferencia en horas
-        const recoveryHours = (resolvedAt.getTime() - createdAt.getTime()) / (1000 * 60 * 60);
-
-        // Agrupar por día (e.g., "Oct 30")
-        const dateString = resolvedAt.toLocaleDateString('es-ES', { month: 'short', day: 'numeric' });
-
-        if (!dailyStats[dateString]) {
-          dailyStats[dateString] = {
-            totalHours: 0,
-            count: 0,
-            dateObj: resolvedAt // Guardar el objeto Date para ordenar
-          };
-        }
-        
-        dailyStats[dateString].totalHours += recoveryHours;
-        dailyStats[dateString].count += 1;
-      }
-    });
-
-    // 4. Formatear como array para el gráfico
-    const processedData: ChartDataPoint[] = Object.keys(dailyStats).map(dateString => {
-      const stats = dailyStats[dateString];
-      const avgHours = stats.totalHours / stats.count;
-      return {
-        date: dateString,
-        value: parseFloat(avgHours.toFixed(1)), // Valor promedio con 1 decimal
-        dateObj: stats.dateObj
-      };
-    });
-
-    // 5. Ordenar los datos cronológicamente
-    processedData.sort((a, b) => a.dateObj.getTime() - b.dateObj.getTime());
-    
-    // 6. Quitar el dateObj antes de enviar al cliente
-    const chartData = processedData.map(({ date, value }) => ({ date, value }));
+    if (chartData.length === 0) {
+       return NextResponse.json([]);
+    }
 
     return NextResponse.json(chartData);
 
-  } catch (e: any) {
-    return new NextResponse(
-      JSON.stringify({ message: 'Error processing recovery time series', error: e.message }),
-      { status: 500 }
-    );
+  } catch (error: any) {
+    console.error("Error en API recovery-times-series:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

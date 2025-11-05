@@ -13,19 +13,26 @@ import requests
 
 # =============== CONFIG POR ENV ===============
 
+# URLs: Eliminamos STATUS_API_URL
 API_URL = os.getenv("BUGRADAR_API_URL", "http://localhost:3000/api/logs")
-STATUS_API_URL = os.getenv("BUGRADAR_STATUS_API_URL", "http://localhost:3000/api/status")
 LATENCY_API_URL = os.getenv("BUGRADAR_LATENCY_API_URL", "http://localhost:3000/api/latency")
-
-
 LATENCY_TARGET_URL = os.getenv("BUGRADAR_LATENCY_TARGET_URL")
 
-USER_ID = os.getenv("BUGRADAR_USER_ID", "")
+# API Key: (Esto se queda)
+API_KEY = os.getenv("BUGRADAR_API_KEY", "")
+if not API_KEY:
+    print("❌ BUGRADAR_API_KEY is not set. The agent will not work.")
+    exit(1)
 
+AUTH_HEADERS = {
+    "Authorization": f"Bearer {API_KEY}"
+}
+
+# Configuración del Agente:
 MONITOR_CONTAINERS = os.getenv("BUGRADAR_CONTAINERS", "")
 TAIL = int(os.getenv("BUGRADAR_TAIL", "100"))
 PARSE_JSON = os.getenv("BUGRADAR_PARSE_JSON", "1") == "1"
-HEARTBEAT_EVERY = int(os.getenv("BUGRADAR_HEARTBEAT_EVERY", "60"))
+# HEARTBEAT_EVERY = int(os.getenv("BUGRADAR_HEARTBEAT_EVERY", "60")) # Ya no se usa
 LATENCY_EVERY = int(os.getenv("BUGRADAR_LATENCY_EVERY", "300"))
 
 ERROR_KEYWORDS = ["error", "exception", "traceback", "failed", "critical", "panic", "fatal"]
@@ -43,9 +50,12 @@ def should_monitor(name: str) -> bool:
     wl = [x.strip() for x in MONITOR_CONTAINERS.split(",") if x.strip()]
     return name in wl
 
-def http_post(url: str, payload: dict, timeout=5):
+# Modificamos http_post: 'use_auth=False' -> 'use_auth=True' por defecto para simplificar
+# Ya que todas las llamadas restantes (logs, latency) SÍ usan autenticación.
+def http_post(url: str, payload: dict, timeout=5, use_auth=True):
     try:
-        r = requests.post(url, json=payload, timeout=timeout)
+        headers = AUTH_HEADERS if use_auth else {}
+        r = requests.post(url, json=payload, timeout=timeout, headers=headers)
         if r.status_code not in (200, 201):
             print(f"  ❌ POST {url} -> {r.status_code}: {r.text[:300]}")
         else:
@@ -56,6 +66,7 @@ def http_post(url: str, payload: dict, timeout=5):
         return None
 
 # =============== SEVERITY CLASSIFICATION ===============
+# (Esta sección no cambia)
 
 def normalize_level(val: str) -> str:
     s = str(val).strip().lower()
@@ -92,28 +103,22 @@ def get_severity(line: str) -> Optional[str]:
 # =============== API PAYLOADS ===============
 
 def send_log_to_api(log_message: str, container_name: str, severity: str):
+    # (use_auth=True es el por defecto ahora)
     http_post(API_URL, {
         "log_message": log_message,
         "container_name": container_name,
         "severity": severity,
-        "user_id": USER_ID
     })
 
-def send_status_to_api(container_name: str, status: str):
-    http_post(STATUS_API_URL, {
-        "container_name": container_name,
-        "status": status,
-        "user_id": USER_ID or None
-    })
-
+# --- send_status_to_api() HA SIDO ELIMINADA ---
 
 def send_latency_to_api(endpoint: str, method: str, latency_ms: int, status_code: int):
+    # (use_auth=True es el por defecto ahora)
     http_post(LATENCY_API_URL, {
         "endpoint": endpoint,
         "method": method,
         "latency_ms": latency_ms,
         "status_code": status_code,
-        "user_id": USER_ID or None
     })
 
 # =============== DOCKER ===============
@@ -129,6 +134,7 @@ def connect_to_docker():
         return None
 
 # =============== LOG MONITORING ===============
+# (Esta sección no cambia)
 
 def stream_container_logs(container, out_q: queue.Queue):
     name = container.name
@@ -164,56 +170,23 @@ def start_logs_threads(client) -> threading.Event:
     return stop_evt
 
 # =============== STATUS MONITORING (UP/DOWN + HEARTBEAT) ===============
-
-def monitor_container_status(client):
-    print("🚦 Listening for Docker events (UP/DOWN) and sending heartbeats...")
-    try:
-        for c in client.containers.list():
-            if should_monitor(c.name): send_status_to_api(c.name, "heartbeat")
-    except Exception as e:
-        print(f"❌ Could not list containers at startup (status): {e}")
-
-    def heartbeat_loop():
-        while True:
-            try:
-                for c in client.containers.list():
-                    if should_monitor(c.name): send_status_to_api(c.name, "heartbeat")
-                time.sleep(HEARTBEAT_EVERY)
-            except KeyboardInterrupt:
-                break
-            except Exception as e:
-                print(f"❌ Heartbeat error: {e}")
-                time.sleep(HEARTBEAT_EVERY)
-    threading.Thread(target=heartbeat_loop, daemon=True).start()
-
-    try:
-        for ev in client.events(decode=True):
-            if ev.get("Type") != "container": continue
-            attrs = ev.get("Actor", {}).get("Attributes", {}) or {}
-            name = attrs.get("name")
-            if not name or not should_monitor(name): continue
-            action = ev.get("Action")
-            if action in ("start", "unpause", "health_status: healthy"): send_status_to_api(name, "up")
-            elif action in ("die", "stop", "pause", "health_status: unhealthy", "kill", "oom"): send_status_to_api(name, "down")
-    except KeyboardInterrupt:
-        print("🛑 Stopping status monitor...")
-    except Exception as e:
-        print(f"❌ Event stream error: {e}")
-
+#
+# --- TODA LA SECCIÓN HA SIDO ELIMINADA ---
+#
 # =============== LATENCY MONITORING ===============
+# (Esta sección no cambia)
 
 def substitute_path_vars(path):
-    # Reemplaza <tipo:nombre> por un valor por defecto. Sencillo por ahora.
     path = re.sub(r"<int:[^>]+>", "1", path)
     path = re.sub(r"<string:[^>]+>", "default", path)
-    path = re.sub(r"<[^>]+>", "1", path) # Genérico
+    path = re.sub(r"<[^>]+>", "1", path)
     return path
 
 def measure_latency(endpoint_info):
     base_url = LATENCY_TARGET_URL.rstrip('/')
     path = substitute_path_vars(endpoint_info['rule'])
     url = f"{base_url}{path}"
-    method = endpoint_info['methods'][0] # Usamos el primer método listado
+    method = endpoint_info['methods'][0]
 
     try:
         start_time = time.monotonic()
@@ -244,7 +217,7 @@ def latency_loop():
             print(f"Discovered {len(endpoints)} endpoints to monitor.")
             for endpoint in endpoints:
                 measure_latency(endpoint)
-                time.sleep(1) # Pequeña pausa entre cada endpoint
+                time.sleep(1) 
 
             time.sleep(LATENCY_EVERY)
         except KeyboardInterrupt:
@@ -256,17 +229,15 @@ def latency_loop():
 # =============== MAIN ===============
 
 def main():
-    if not USER_ID: print("⚠️ BUGRADAR_USER_ID not set.")
-
     client = connect_to_docker()
     if not client: return
 
-    threading.Thread(target=monitor_container_status, args=(client,), daemon=True).start()
+    # --- La línea de 'monitor_container_status' HA SIDO ELIMINADA ---
     threading.Thread(target=latency_loop, daemon=True).start()
 
     stop_evt = start_logs_threads(client)
 
-    print("🚀 Agent started. (Ctrl+C to stop)")
+    print("🚀 Agent started (Logs & Latency only). (Ctrl+C to stop)")
     try:
         while True: time.sleep(1)
     except KeyboardInterrupt:

@@ -11,9 +11,34 @@ type Ev = {
   status?: "open" | "resolved" | "ignored";
 };
 
+interface LogStreamProps {
+  projectId: string | null;
+}
+
 const SCROLL_HEIGHT_CLASS = "max-h-[420px]";
 
-export default function LogStream() {
+// función de comparación sencilla para evitar rerenders inútiles
+function sameEvents(a: Ev[], b: Ev[]) {
+  if (a.length !== b.length) return false;
+  // comparamos entrada por entrada; si en tu caso el orden puede cambiar, aquí habría que hacer algo más robusto
+  for (let i = 0; i < a.length; i++) {
+    const ea = a[i];
+    const eb = b[i];
+    if (
+      ea.id !== eb.id ||
+      ea.created_at !== eb.created_at ||
+      ea.severity !== eb.severity ||
+      ea.log_message !== eb.log_message ||
+      ea.container_name !== eb.container_name ||
+      (ea.status ?? "open") !== (eb.status ?? "open")
+    ) {
+      return false;
+    }
+  }
+  return true;
+}
+
+export default function LogStream({ projectId }: LogStreamProps) {
   const [activeTab, setActiveTab] = useState<string>("Errors (0)");
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<Ev[]>([]);
@@ -21,37 +46,69 @@ export default function LogStream() {
 
   useEffect(() => {
     let mounted = true;
-    let t: any;
+    let intervalId: any;
+    let isFirstLoad = true;
 
     const load = async () => {
+      if (!projectId) {
+        if (mounted) setLoading(false);
+        return;
+      }
+
+      // solo la primera vez mostramos loading
+      if (isFirstLoad && mounted) {
+        setLoading(true);
+      }
+
       try {
-        // Traemos últimos N eventos (abiertos y cerrados) y filtramos en cliente
-        const res = await fetch(`/api/logs?limit=300`, { cache: "no-store" });
+        const res = await fetch(
+          `/api/logs?project_id=${projectId}&limit=300`,
+          { cache: "no-store" }
+        );
         if (!mounted) return;
         const json = await res.json();
-        setEvents(json.items ?? []);
-      } catch (err: any) {
-        /* ignorar AbortError */
+        const incoming: Ev[] = json.items ?? [];
+
+        // 👇 aquí está la clave: solo actualizamos si realmente cambió
+        setEvents((prev) => {
+          if (sameEvents(prev, incoming)) {
+            return prev; // no forzar rerender
+          }
+          return incoming;
+        });
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Failed to fetch logs:", err);
+        }
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted && isFirstLoad) {
+          setLoading(false);
+          isFirstLoad = false;
+        }
       }
     };
 
     load();
-    t = setInterval(load, 5000);
+    intervalId = setInterval(load, 5000);
+
     return () => {
-      clearInterval(t);
       mounted = false;
+      clearInterval(intervalId);
     };
-  }, []);
+  }, [projectId]);
 
   // Contadores por tab
   const counts = useMemo(() => {
     const isOpen = (e: Ev) => (e.status ?? "open") === "open";
-    const isClosed = (e: Ev) => (e.status === "resolved" || e.status === "ignored");
+    const isClosed = (e: Ev) =>
+      e.status === "resolved" || e.status === "ignored";
 
-    const eOpen = events.filter(e => e.severity === "error" && isOpen(e)).length;
-    const wOpen = events.filter(e => e.severity === "warning" && isOpen(e)).length;
+    const eOpen = events.filter(
+      (e) => e.severity === "error" && isOpen(e)
+    ).length;
+    const wOpen = events.filter(
+      (e) => e.severity === "warning" && isOpen(e)
+    ).length;
     const closed = events.filter(isClosed).length;
 
     return { eOpen, wOpen, closed };
@@ -63,7 +120,7 @@ export default function LogStream() {
     const debug = `Debug (${counts.closed})`;
     const metrics = "Metrics";
 
-    const currentType = activeTab.split(" ")[0]; // Errors/Warnings/Debug/Metrics
+    const currentType = activeTab.split(" ")[0];
     const newMap: Record<string, string> = {
       Errors: errors,
       Warnings: warnings,
@@ -77,18 +134,19 @@ export default function LogStream() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [counts.eOpen, counts.wOpen, counts.closed]);
 
-  // Filtro por tab + búsqueda
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     const isOpen = (e: Ev) => (e.status ?? "open") === "open";
-    const isClosed = (e: Ev) => (e.status === "resolved" || e.status === "ignored");
+    const isClosed = (e: Ev) =>
+      e.status === "resolved" || e.status === "ignored";
 
     let base = events;
 
-    if (activeTab.startsWith("Errors")) base = base.filter(e => e.severity === "error" && isOpen(e));
-    else if (activeTab.startsWith("Warnings")) base = base.filter(e => e.severity === "warning" && isOpen(e));
+    if (activeTab.startsWith("Errors"))
+      base = base.filter((e) => e.severity === "error" && isOpen(e));
+    else if (activeTab.startsWith("Warnings"))
+      base = base.filter((e) => e.severity === "warning" && isOpen(e));
     else if (activeTab.startsWith("Debug")) base = base.filter(isClosed);
-    // Metrics: dejamos todo (o podrías dejar vacío, como en tu maqueta original)
 
     if (q) {
       base = base.filter(
@@ -97,7 +155,10 @@ export default function LogStream() {
           x.container_name.toLowerCase().includes(q) ||
           x.severity.toLowerCase().includes(q) ||
           (x.status ?? "open").toLowerCase().includes(q) ||
-          new Date(x.created_at).toLocaleDateString('en-GB').toLowerCase().includes(q.toLowerCase())
+          new Date(x.created_at)
+            .toLocaleDateString("en-GB")
+            .toLowerCase()
+            .includes(q.toLowerCase())
       );
     }
     return base;
@@ -109,8 +170,11 @@ export default function LogStream() {
         id: ev.id,
         time: new Date(ev.created_at).toLocaleString(),
         severity:
-          ev.severity === "error" ? "Error" :
-          ev.severity === "warning" ? "Warning" : "",
+          ev.severity === "error"
+            ? "Error"
+            : ev.severity === "warning"
+            ? "Warning"
+            : "",
         message: ev.log_message,
         service: ev.container_name || "—",
         status: ev.status ?? "open",
@@ -142,16 +206,18 @@ export default function LogStream() {
             key={tab}
             onClick={() => setActiveTab(tab)}
             className={`px-4 py-2 flex-1 transition-colors
-              ${activeTab === tab
-                ? "bg-primary text-primary-foreground font-semibold"
-                : "text-skin-subtitle hover:text-skin-title hover:bg-skin-panel"}`}
+              ${
+                activeTab === tab
+                  ? "bg-primary text-primary-foreground font-semibold"
+                  : "text-skin-subtitle hover:text-skin-title hover:bg-skin-panel"
+              }`}
           >
             {tab}
           </button>
         ))}
       </div>
 
-      {/* Desktop table + scroll estilizado */}
+      {/* Desktop */}
       <div className="hidden md:block">
         <div className="grid grid-cols-5 px-3 py-2 text-xs uppercase text-skin-subtitle border-b border-border">
           <div>Timestamp</div>
@@ -165,7 +231,9 @@ export default function LogStream() {
           {loading ? (
             <div className="px-3 py-4 text-skin-subtitle">Loading…</div>
           ) : logs.length === 0 ? (
-            <div className="px-3 py-4 text-skin-subtitle">No logs</div>
+            <div className="px-3 py-4 text-skin-subtitle">
+              No logs found for this project.
+            </div>
           ) : (
             logs.map((log) => (
               <div
@@ -186,10 +254,17 @@ export default function LogStream() {
                     {log.severity}
                   </span>
                 </div>
-                <div className="truncate" title={log.message}>{log.message}</div>
-                <div className="truncate" title={log.service}>{log.service}</div>
+                <div className="truncate" title={log.message}>
+                  {log.message}
+                </div>
+                <div className="truncate" title={log.service}>
+                  {log.service}
+                </div>
                 <div className="text-right">
-                  <Link href={`/detail/${log.id}`} className="text-[var(--details-link)] hover:underline">
+                  <Link
+                    href={`/detail/${log.id}`}
+                    className="text-[var(--details-link)] hover:underline"
+                  >
                     View Details
                   </Link>
                 </div>
@@ -199,15 +274,22 @@ export default function LogStream() {
         </div>
       </div>
 
-      {/* Mobile cards + scroll estilizado */}
-      <div className={`md:hidden flex flex-col gap-4 ${SCROLL_HEIGHT_CLASS} overflow-y-auto scrollbar-thin`}>
+      {/* Mobile */}
+      <div
+        className={`md:hidden flex flex-col gap-4 ${SCROLL_HEIGHT_CLASS} overflow-y-auto scrollbar-thin`}
+      >
         {loading ? (
           <div className="text-skin-subtitle">Loading…</div>
         ) : logs.length === 0 ? (
-          <div className="text-skin-subtitle">No logs</div>
+          <div className="text-skin-subtitle">
+            No logs found for this project.
+          </div>
         ) : (
           logs.map((log) => (
-            <div key={log.id} className="border border-border rounded-md p-4 bg-skin-panel shadow-elev-1">
+            <div
+              key={log.id}
+              className="border border-border rounded-md p-4 bg-skin-panel shadow-elev-1"
+            >
               <div className="text-xs text-skin-subtitle mb-1">Timestamp</div>
               <div className="mb-2 text-skin-title">{log.time}</div>
 
@@ -233,7 +315,10 @@ export default function LogStream() {
               <div className="mb-2 text-skin-title">{log.service}</div>
 
               <div className="text-right mt-2">
-                <Link href={`/detail/${log.id}`} className="text-[var(--primary)] text-sm font-medium hover:underline">
+                <Link
+                  href={`/detail/${log.id}`}
+                  className="text-[var(--primary)] text-sm font-medium hover:underline"
+                >
                   View Details
                 </Link>
               </div>

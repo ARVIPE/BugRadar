@@ -1,46 +1,68 @@
-// src/components/useMetrics.ts
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-type Metrics = {
+interface MetricData {
   activeErrors: number;
   warningsToday: number;
   logsLastHour: number;
-  uptime: number;
-};
+}
 
-export function useMetrics(refreshMs = 5000) {
-  const [data, setData] = useState<Metrics | null>(null);
-  const [loading, setLoading] = useState(true);
+// comparación simple para saber si las métricas cambiaron
+function sameMetrics(a: MetricData | null, b: MetricData | null) {
+  if (a === b) return true;
+  if (!a || !b) return false;
+  return (
+    a.activeErrors === b.activeErrors &&
+    a.warningsToday === b.warningsToday &&
+    a.logsLastHour === b.logsLastHour
+  );
+}
+
+export const useMetrics = (
+  projectId: string | null,
+  refreshInterval: number
+) => {
+  const [data, setData] = useState<MetricData | null>(null);
+
+  const reload = useCallback(async () => {
+    // si aún no hay projectId, no molestamos
+    if (!projectId) return;
+
+    try {
+      const res = await fetch(`/api/metrics?project_id=${projectId}`, {
+        cache: "no-store",
+      });
+      if (!res.ok) {
+        throw new Error(`Failed to fetch metrics: ${res.statusText}`);
+      }
+      const json = await res.json();
+
+      // validar datos
+      if (json && typeof json.activeErrors === "number") {
+        // 👇 solo seteamos si cambió algo
+        setData((prev) => {
+          if (sameMetrics(prev, json)) {
+            return prev; // no hay cambios -> no re-render
+          }
+          return json;
+        });
+      } else {
+        console.warn("useMetrics poll: API ok but data is invalid.");
+      }
+    } catch (e: any) {
+      // no reventamos el estado si falla una vez
+      console.warn("useMetrics poll failed, retaining old data:", e?.message);
+    }
+  }, [projectId]);
 
   useEffect(() => {
-    let mounted = true;
-    let t: any;
+    // carga inicial
+    reload();
 
-    const load = async () => {
-      try {
-        const res = await fetch("/api/metrics", { cache: "no-store" });
-        if (!mounted) return;
-        const json = await res.json();
-        setData(json);
-      } catch (err: any) {
-        // si es aborto, lo ignoramos; si no, log opcional
-        if (err?.name !== "AbortError") {
-          // console.debug(err);
-        }
-      } finally {
-        if (mounted) setLoading(false);
-      }
-    };
+    const interval = setInterval(reload, refreshInterval);
 
-    load();
-    t = setInterval(load, refreshMs);
+    return () => clearInterval(interval);
+  }, [reload, refreshInterval]);
 
-    return () => {
-      mounted = false;
-      clearInterval(t);
-    };
-  }, [refreshMs]);
-
-  return { data, loading, reload: async () => {} };
-}
+  return { data, reload };
+};

@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation"
 import { signOut, useSession } from "next-auth/react" // NUEVO: Importamos useSession
 
 export default function Navbar() {
-  const { data: session } = useSession() // NUEVO: Obtenemos la sesión del usuario
+  const { data: session } = useSession()
   const [isOpen, setIsOpen] = useState(false)
   const [theme, setTheme] = useState("theme-dark")
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)

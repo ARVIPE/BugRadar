@@ -1,61 +1,85 @@
-"use client"
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts"
-import { useEffect, useState } from "react"
+"use client";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+} from "recharts";
+import { useEffect, useState } from "react";
+import { Loader2 } from "lucide-react"; // Importar spinner
 
-// Tipo de dato esperado de nuestra API
 type RecoveryData = {
   date: string;
-  value: number;
+  value: number; // 'value' sigue siendo el nombre que usa Recharts
+};
+
+interface AlertAndChartProps {
+  projectId: string | null;
 }
 
-export default function AlertAndChart() {
+export default function AlertAndChart({ projectId }: AlertAndChartProps) {
   const [data, setData] = useState<RecoveryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Función async para fetchear los datos
     const fetchData = async () => {
+      if (!projectId) {
+        setIsLoading(false);
+        return;
+      }
+
       setIsLoading(true);
       try {
-        const response = await fetch('/api/metrics/recovery-times-series');
+        const response = await fetch(
+          `/api/metrics/recovery-times-series?project_id=${projectId}`
+        );
         if (!response.ok) {
-          throw new Error('Failed to fetch data');
+          throw new Error("Failed to fetch data");
         }
         const chartData = await response.json();
         setData(chartData);
       } catch (error) {
         console.error("Error fetching chart data:", error);
-        setData([]); // Asegurarse de que no haya datos erróneos
+        setData([]);
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchData();
-  }, []); // Se ejecuta solo una vez al montar el componente
+  }, [projectId]);
 
   return (
     <div className="grid grid-cols-1 gap-6 mt-10">
-      {/* Average Recovery Time Chart */}
       <div className="col-span-1 md:col-span-2 bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-        <h3 className="text-skin-title font-semibold text-sm mb-4">Tiempo de Recuperación Promedio (Hrs) - Últimos 7 días</h3>
+        
+        {/* --- CAMBIO AQUÍ --- */}
+        <h3 className="text-skin-title font-semibold text-sm mb-4">
+          Tiempo de Recuperación Promedio (Mins) - Últimos 7 días
+        </h3>
+        {/* --- FIN DEL CAMBIO --- */}
+
         <div className="h-48 w-full">
           {isLoading ? (
-            // --- Estado de Carga ---
             <div className="flex items-center justify-center h-full text-skin-subtitle">
-              Cargando datos del gráfico...
+              <Loader2 className="w-6 h-6 animate-spin" />
             </div>
           ) : data.length === 0 ? (
-            // --- Estado Sin Datos ---
             <div className="flex items-center justify-center h-full text-skin-subtitle">
-              No hay suficientes eventos resueltos en los últimos 7 días.
+              No hay eventos resueltos en los últimos 7 días.
             </div>
           ) : (
-            // --- Gráfico con Datos ---
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
-                <XAxis dataKey="date" stroke="var(--color-subtitle)" fontSize={12} />
+                <XAxis
+                  dataKey="date"
+                  stroke="var(--color-subtitle)"
+                  fontSize={12}
+                />
                 <YAxis stroke="var(--color-subtitle)" fontSize={12} />
                 <Tooltip
                   contentStyle={{
@@ -64,18 +88,19 @@ export default function AlertAndChart() {
                     borderWidth: 1,
                     fontSize: "0.75rem",
                     color: "var(--color-title)",
-                    borderRadius: "0.5rem" // Añadido para consistencia
+                    borderRadius: "0.5rem",
                   }}
                   labelStyle={{ color: "var(--color-title)" }}
                   itemStyle={{ color: "var(--color-title)" }}
                 />
-                <Line 
-                  type="monotone" 
-                  dataKey="value" 
-                  stroke="var(--strokeLine)" 
-                  strokeWidth={2} 
-                  dot={{ r: 4, fill: "var(--strokeLine)" }} // Puntos en los datos
-                  activeDot={{ r: 6 }} // Punto activo al hacer hover
+                <Line
+                  type="monotone"
+                  dataKey="value"
+                  name="Minutos" // Tooltip
+                  stroke="var(--strokeLine)"
+                  strokeWidth={2}
+                  dot={{ r: 4, fill: "var(--strokeLine)" }}
+                  activeDot={{ r: 6 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -83,5 +108,5 @@ export default function AlertAndChart() {
         </div>
       </div>
     </div>
-  )
+  );
 }
