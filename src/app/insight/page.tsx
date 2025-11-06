@@ -13,14 +13,16 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useMemo } from "react";
+import { useProject } from "@/hooks/useProject"; // 1. Importar hook de proyecto
+import { Loader2 } from "lucide-react"; // Importar spinner
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 
-// Función para procesar los datos de latencia crudos
+// (Tu función original, está perfecta)
 function processLatencyData(data: LatencyRecord[] | null) {
   if (!data) {
     return { chartData: [], logData: [] };
   }
-
-  // Para el gráfico de barras: calcular la latencia media por endpoint
   const averages: { [key: string]: { total: number; count: number } } = {};
   for (const record of data) {
     const key = `${record.method} ${record.endpoint}`;
@@ -30,49 +32,63 @@ function processLatencyData(data: LatencyRecord[] | null) {
     averages[key].total += record.latency_ms;
     averages[key].count += 1;
   }
-
   const chartData = Object.entries(averages).map(([key, { total, count }]) => ({
     path: key,
     latency: Math.round(total / count),
-  })).sort((a, b) => b.latency - a.latency); // Ordenar de más lento a más rápido
-
-  // Para la tabla: simplemente usar los datos más recientes
+  })).sort((a, b) => b.latency - a.latency);
   const logData = [...data].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-
   return { chartData, logData };
 }
 
 export default function InsightPage() {
-  const { data: rawLatencyData, loading } = useLatency(15000); // Refrescar cada 15s
+  const { projectId } = useProject(); // 2. Obtener projectId
+  const { status } = useSession();
+  const router = useRouter();
+
+  // 3. Pasar projectId al hook
+  const { data: rawLatencyData, loading } = useLatency(projectId, 15000); 
 
   const { chartData, logData } = useMemo(() => processLatencyData(rawLatencyData), [rawLatencyData]);
-   // La página se considera "vacía" si no está cargando y no hay datos crudos.
+  
+  // 4. Lógica de carga y autenticación (mejorada)
+  if (status === "loading" || (loading && !rawLatencyData && !projectId)) {
+     return (
+       <div className="flex h-screen items-center justify-center bg-skin-bg">
+         <Loader2 className="w-8 h-8 animate-spin text-skin-subtitle" />
+       </div>
+     );
+  }
+
+  if (status === "unauthenticated") {
+    router.push("/");
+    return null;
+  }
+
+  // Comprueba si está vacío después de cargar
   const isEmpty = !loading && (!rawLatencyData || rawLatencyData.length === 0);
 
+  // 5. Tu JSX original (perfecto)
   return (
     <>
       <Navbar />
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-6xl mx-auto space-y-8">
           <h1 className="text-3xl font-bold">Request Latency</h1>
-           {/* Estado Vacío */}
           {isEmpty && (
             <div className="bg-skin-panel p-8 rounded-lg border border-border text-center text-skin-subtitle">
-              <h2 className="font-semibold text-lg text-skin-title">No Endpoints Available</h2>
+              <h2 className="font-semibold text-lg text-skin-title">No Latency Data</h2>
               <p className="mt-2 text-sm">
-                Latency monitoring is only applicable for services with web interfaces or APIs.
+                No latency data has been received for this project in the last 24 hours.
               </p>
             </div>
           )}
 
           {/* Chart Section */}
-          <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
-            <h2 className="text-lg font-semibold mb-4 text-skin-title">
-              Average Latency per Endpoint (ms, last 24h)
-            </h2>
-            {loading && !chartData.length ? (
-              <div className="flex justify-center items-center h-[300px]">Loading chart...</div>
-            ) : (
+          {!isEmpty && (
+            <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
+              <h2 className="text-lg font-semibold mb-4 text-skin-title">
+                Average Latency per Endpoint (ms, last 24h)
+              </h2>
               <ResponsiveContainer width="100%" height={300}>
                 <BarChart data={chartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -83,20 +99,19 @@ export default function InsightPage() {
                       backgroundColor: "var(--color-panel)",
                       borderColor: "var(--border)",
                       color: "var(--color-title)",
+                      borderRadius: "0.5rem"
                     }}
                   />
                   <Bar dataKey="latency" fill="var(--yellow)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Table Section */}
-          <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
-            <h2 className="text-lg font-semibold mb-4 text-skin-title">Recent Latency Checks</h2>
-            {loading && !logData.length ? (
-              <div className="text-center py-4">Loading logs...</div>
-            ) : (
+          {!isEmpty && (
+            <div className="bg-skin-panel p-6 rounded-lg border border-border shadow-elev-1">
+              <h2 className="text-lg font-semibold mb-4 text-skin-title">Recent Latency Checks</h2>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead className="text-skin-subtitle border-b border-border">
@@ -108,7 +123,7 @@ export default function InsightPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {logData.slice(0, 20).map((log, i) => ( // Mostrar solo los últimos 20
+                    {logData.slice(0, 20).map((log, i) => (
                       <tr key={i} className="border-b border-border hover:bg-skin-bg transition-colors">
                         <td className="py-2 px-4 text-skin-title">{new Date(log.created_at).toLocaleString()}</td>
                         <td className="py-2 px-4 font-mono">{log.method} {log.endpoint}</td>
@@ -125,8 +140,8 @@ export default function InsightPage() {
                   </tbody>
                 </table>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
       <Footer />

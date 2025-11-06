@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { NextResponse } from 'next/server';
+import { getServerSession } from "next-auth/next";
+import { authConfig } from "@/app/api/auth/[...nextauth]/route";
 import { createClient } from "@supabase/supabase-js";
-import { z } from "zod";
 
-// Usamos la misma inicialización de Supabase que en tu api/logs/route.ts
+// Tu patrón de cliente admin
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -10,44 +11,53 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-// Esquema para validar los parámetros de consulta (MODIFICADO)
-const QuerySchema = z.object({
-  // CAMBIADO de container_name a log_message
-  log_message: z.string().min(1, "log_message is required"),
-});
-
-// Asegura que esta ruta se ejecute dinámicamente y no sea cacheada
-export const dynamic = 'force-dynamic';
-
 export async function GET(req: Request) {
+  // 1. Autenticación
+  const session = await getServerSession(authConfig);
+  if (!session || !session.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  // 2. Obtener Project ID
+  const { searchParams } = new URL(req.url);
+  const projectId = searchParams.get("project_id");
+  if (!projectId) {
+    return NextResponse.json({ error: "project_id is required" }, { status: 400 });
+  }
+
+  const db = supabase();
+
+  // 3. Comprobación de Seguridad
+  const { data: projectData, error: projectError } = await db
+    .from("projects")
+    .select("id")
+    .eq("id", projectId)
+    .eq("user_id", session.user.id)
+    .single();
+
+  if (projectError || !projectData) {
+    return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
+  }
+  // --- Fin Comprobación ---
+
   try {
-    const { searchParams } = new URL(req.url);
-    const params = Object.fromEntries(searchParams.entries());
-
-    // 1. Validar los parámetros de la URL
-    const parsed = QuerySchema.safeParse(params);
-    if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
-    }
-
-    // 2. Obtener el log_message (MODIFICADO)
-    const { log_message } = parsed.data;
-
-    // 3. Llamar a la NUEVA función de la base de datos (RPC) (MODIFICADO)
-    const { data, error } = await supabase().rpc('get_recurrence_history_by_message', {
-      p_log_message: log_message, // Pasar el mensaje
+    // 4. --- CAMBIO CLAVE ---
+    // Llamamos a la función RPC que acabamos de crear
+    const { data, error } = await db.rpc('get_project_recurrence', {
+      project_id_param: projectId
     });
+    // --- FIN DEL CAMBIO ---
 
     if (error) {
-      console.error("Supabase RPC Error (get_recurrence_history_by_message):", error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      console.error("Error llamando a RPC get_project_recurrence:", error);
+      throw error;
     }
 
-    // 4. Devolver los datos listos para el gráfico
-    return NextResponse.json(data, { status: 200 });
+    // Los datos ya vienen en el formato correcto
+    return NextResponse.json(data);
 
   } catch (error: any) {
-    console.error("Error in GET /api/logs/recurrence:", error.message);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("Error fetching recurrence stats:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }

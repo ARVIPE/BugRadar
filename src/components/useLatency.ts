@@ -1,45 +1,61 @@
-// src/components/useLatency.ts
 "use client";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 
-export type LatencyRecord = {
+export interface LatencyRecord {
+  created_at: string;
   endpoint: string;
   method: string;
-  latency_ms: number;
   status_code: number;
-  created_at: string;
-};
+  latency_ms: number;
+}
 
-export function useLatency(refreshMs = 30000) {
+// 1. Añadimos 'projectId' como primer argumento
+export const useLatency = (
+  projectId: string | null, // <-- CAMBIO
+  refreshInterval: number
+) => {
   const [data, setData] = useState<LatencyRecord[] | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const load = async (signal?: AbortSignal) => {
+  const reload = useCallback(async () => {
+    // 2. No hacer fetch si falta el ID
+    if (!projectId) {
+      setLoading(false);
+      return;
+    }
+
+    // (Solo mostrar 'loading' en la carga inicial)
+    if (data === null) {
+      setLoading(true);
+    }
+
     try {
-      const res = await fetch("/api/latency", { cache: "no-store", signal });
-      if (res.ok) {
-        const json = await res.json();
-        setData(json);
+      // 3. Añadir el projectId a la URL
+      const res = await fetch(`/api/latency?project_id=${projectId}`); // <-- CAMBIO
+      if (!res.ok) {
+        throw new Error(`Failed to fetch latency: ${res.statusText}`);
       }
-    } catch (err: any) {
-      if (err?.name !== "AbortError") {
-        console.error("Failed to fetch latency data:", err);
+      const json = await res.json();
+      
+      // 4. Comprobar que 'items' es un array (previene flasheo)
+      if (Array.isArray(json.items)) {
+        setData(json.items);
+      } else {
+        console.warn("useLatency: API OK but json.items is not an array");
       }
+    } catch (e: any) {
+      console.warn("useLatency poll failed, retaining old data", e.message);
+      // No ponemos setData(null) para evitar el flasheo
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId, data]); // 'data' está aquí para la lógica de setLoading
 
   useEffect(() => {
-    const controller = new AbortController();
-    load(controller.signal);
-    const timer = setInterval(() => load(controller.signal), refreshMs);
+    reload(); // Carga inicial
+    const interval = setInterval(reload, refreshInterval);
+    return () => clearInterval(interval);
+  }, [reload, refreshInterval]);
 
-    return () => {
-      controller.abort();
-      clearInterval(timer);
-    };
-  }, [refreshMs]);
-
-  return { data, loading, reload: load };
-}
+  return { data, loading, reload };
+};
