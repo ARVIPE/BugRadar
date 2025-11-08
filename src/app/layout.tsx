@@ -2,7 +2,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import NextAuthSessionProvider from "./session-provider"; // NUEVO: Importamos nuestro proveedor
+import NextAuthSessionProvider from "./session-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,15 +21,15 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en">
+    <html
+    suppressHydrationWarning={true}>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* NUEVO: Envolvemos toda la aplicación con el proveedor de sesión */}
         <NextAuthSessionProvider>{children}</NextAuthSessionProvider>
       </body>
     </html>

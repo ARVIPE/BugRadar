@@ -1,0 +1,14 @@
+{
+  "Login": {
+    "title": "Bienvenido a BugRadar",
+    "subtitle": "Monitoreo de errores en tiempo real para tus apps Docker",
+    "email": "Correo",
+    "password": "Contraseña",
+    "signin": "Iniciar sesión",
+    "signinLoading": "Iniciando...",
+    "noAccount": "¿No tienes cuenta?",
+    "signup": "Regístrate",
+    "errorInvalid": "El correo o la contraseña son incorrectos. Por favor inténtalo de nuevo.",
+    "quote": "Hasta los bugs merecen ser vistos... y reportados 👀"
+  }
+}
