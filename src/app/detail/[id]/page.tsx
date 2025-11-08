@@ -22,6 +22,7 @@ type EventItem = {
   severity: "info" | "warning" | "error";
   log_message: string;
   container_name: string;
+  project_id: string; // <-- Importante que el tipo incluya esto
   status?: "open" | "resolved" | "ignored";
 };
 
@@ -43,7 +44,6 @@ export default function DetailPage() {
     value: number;
   };
 
-
   useEffect(() => {
     let mounted = true;
 
@@ -51,35 +51,48 @@ export default function DetailPage() {
       setLoading(true);
       setChartLoading(true);
       try {
+        // 1. Carga el evento principal (esto estaba bien)
         const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Not found");
         const ev: EventItem = await res.json();
         if (!mounted) return;
         setEvent(ev);
 
+        // --- INICIO DE CAMBIOS ---
+        // 2. Carga la recurrencia USANDO el project_id y log_message del evento
         try {
           const recurrenceRes = await fetch(
-            `/api/recurrence?log_message=${encodeURIComponent(ev.log_message)}`,
+            `/api/recurrence?project_id=${
+              ev.project_id
+            }&log_message=${encodeURIComponent(ev.log_message)}`,
             { cache: "no-store" }
           );
           if (recurrenceRes.ok) {
             const chartData: RecurrenceData[] = await recurrenceRes.json();
-            if(mounted){
+            if (mounted) {
               setRecurrenceData(chartData);
             }
           }
         } catch (chartError) {
           console.error("Failed to load recurrence data", chartError);
-          if(mounted) setRecurrenceData([]);
+          if (mounted) setRecurrenceData([]);
         } finally {
           if (mounted) setChartLoading(false);
         }
-        // Cargar relacionados por mismo contenedor
-        const relRes = await fetch(`/api/logs?log_message=${encodeURIComponent(ev.log_message)}&limit=10`,
-        { cache: "no-store" });
+
+        // 3. Carga los logs relacionados USANDO el project_id y log_message
+        const relRes = await fetch(
+          `/api/logs?project_id=${
+            ev.project_id
+          }&log_message=${encodeURIComponent(ev.log_message)}&limit=10`,
+          { cache: "no-store" }
+        );
+        // --- FIN DE CAMBIOS ---
+
         const relJson = await relRes.json();
-        // Filtramos el evento actual (esto sigue igual)
-        const others: EventItem[] = (relJson.items ?? []).filter((x: EventItem) => x.id !== ev.id);
+        const others: EventItem[] = (relJson.items ?? []).filter(
+          (x: EventItem) => x.id !== ev.id
+        );
         setRelated(others.slice(0, 3));
       } catch (e) {
         setEvent(null);
@@ -95,8 +108,18 @@ export default function DetailPage() {
     };
   }, [id]);
 
+  // ... (El resto de tu fichero .tsx no necesita cambios) ...
+  // ... (pega el resto de tu código aquí: title, ts, act, handleBack, y todo el return) ...
+
   const title = useMemo(() => {
     if (!event) return "Log not found";
+    // Intenta parsear el JSON para un título más limpio
+    try {
+      const parsed = JSON.parse(event.log_message);
+      if (parsed.msg) return parsed.msg;
+    } catch (e) {
+      // fallback
+    }
     return event.log_message.length > 150
       ? event.log_message.slice(0, 150) + "…"
       : event.log_message;
@@ -114,13 +137,11 @@ export default function DetailPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action,
-          // Si quieres registrar quién lo hizo y ya tienes NextAuth:
-          // user_id: session?.user?.id
         }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed");
-      setEvent(json.event); // refresca status/resuelto/ignorado
+      setEvent(json.event);
     } catch (e: any) {
       setErrorMsg(e?.message || "Unexpected error");
     } finally {
@@ -145,7 +166,9 @@ export default function DetailPage() {
             {!loading && (
               <p className="text-sm text-skin-subtitle">
                 {ts} • {event?.container_name} • {event?.severity?.toUpperCase()}
-                {event?.status ? ` • STATUS: ${event.status.toUpperCase()}` : ""}
+                {event?.status
+                  ? ` • STATUS: ${event.status.toUpperCase()}`
+                  : ""}
               </p>
             )}
             <Button onClick={handleBack} className="mt-4">
@@ -160,64 +183,87 @@ export default function DetailPage() {
             <div className="md:col-span-2 space-y-6 flex flex-col">
               {/* Error Details */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
-                <h2 className="text-lg font-semibold mb-2 text-skin-title">Error Details</h2>
+                <h2 className="text-lg font-semibold mb-2 text-skin-title">
+                  Error Details
+                </h2>
                 <p className="text-sm text-skin-subtitle mb-4">
                   {loading
                     ? "Loading…"
-                    : "Details extracted from the log message below. (Enhance later with stack trace parsing)."}
+                    : "Detalles extraídos del log."}
                 </p>
 
                 {/* Mensaje crudo */}
                 {!loading && (
                   <pre className="mt-4 text-xs whitespace-pre-wrap bg-skin-bg p-3 rounded border border-border">
-                    {event?.log_message}
+                    {/* Formateo bonito si es JSON */}
+                    {(() => {
+                      try {
+                        const parsed = JSON.parse(event?.log_message ?? "{}");
+                        return JSON.stringify(parsed, null, 2);
+                      } catch(e) {
+                        return event?.log_message;
+                      }
+                    })()}
                   </pre>
                 )}
               </div>
 
-              {/* Recurrence History (placeholder igual que tu maqueta) */}
+              {/* Recurrence History */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 flex-1 flex flex-col shadow-elev-1">
-                <h2 className="text-lg font-semibold mb-1 text-skin-title">Recurrence History</h2>
-                <p className="text-sm text-skin-subtitle mb-4">Occurrences over the last 7 days</p>
+                <h2 className="text-lg font-semibold mb-1 text-skin-title">
+                  Recurrence History
+                </h2>
+                <p className="text-sm text-skin-subtitle mb-4">
+                  Occurrences over the last 7 days
+                </p>
                 <div className="flex-grow min-h-[300px]">
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full text-skin-subtitle">
                       Loading chart…
-                      </div>
+                    </div>
                   ) : recurrenceData.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-skin-subtitle">
                       No recurrence data available.
                     </div>
                   ) : (
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={recurrenceData}>
-                      <XAxis dataKey="date" stroke="var(--color-subtitle)" fontSize={12} />
-                      <YAxis stroke="var(--color-subtitle)" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: "var(--color-panel)",
-                          borderColor: "var(--border)",
-                          borderWidth: 1,
-                          color: "var(--color-title)",
-                          fontSize: "0.8rem",
-                        }}
-                        labelStyle={{ color: "var(--color-title)" }}
-                        itemStyle={{ color: "var(--color-title)" }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="value"
-                        stroke="var(--yellow)"
-                        strokeWidth={2}
-                        dot={{
-                          r: 4,
-                          stroke: "var(--yellow)",
-                          strokeWidth: 2,
-                          fill: "var(--yellow)",
-                        }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={recurrenceData}>
+                        <XAxis
+                          dataKey="date"
+                          stroke="var(--color-subtitle)"
+                          fontSize={12}
+                        />
+                        <YAxis
+                          stroke="var(--color-subtitle)"
+                          fontSize={12}
+                          allowDecimals={false} // Para no mostrar 0.5, 1.5, etc.
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: "var(--color-panel)",
+                            borderColor: "var(--border)",
+                            borderWidth: 1,
+                            color: "var(--color-title)",
+                            fontSize: "0.8rem",
+                          }}
+                          labelStyle={{ color: "var(--color-title)" }}
+                          itemStyle={{ color: "var(--color-title)" }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          name="Count"
+                          stroke="var(--yellow)"
+                          strokeWidth={2}
+                          dot={{
+                            r: 4,
+                            stroke: "var(--yellow)",
+                            strokeWidth: 2,
+                            fill: "var(--yellow)",
+                          }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
                   )}
                 </div>
               </div>
@@ -225,9 +271,11 @@ export default function DetailPage() {
 
             {/* Right column */}
             <div className="space-y-6 flex flex-col">
-              {/* Actions (mismo UI, con funcionalidad) */}
+              {/* Actions */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
-                <h2 className="text-lg font-semibold mb-4 text-skin-title">Actions</h2>
+                <h2 className="text-lg font-semibold mb-4 text-skin-title">
+                  Actions
+                </h2>
                 <Button
                   className="w-full mb-2"
                   style={{ background: "var(--yellow)", color: "black" }}
@@ -254,14 +302,17 @@ export default function DetailPage() {
 
                 {event?.status && (
                   <p className="mt-2 text-xs text-skin-subtitle">
-                    Status: <span className="text-skin-title">{event.status}</span>
+                    Status:{" "}
+                    <span className="text-skin-title">{event.status}</span>
                   </p>
                 )}
               </div>
 
-              {/* Tags (igual look; muestra container/severity como tags) */}
+              {/* Tags */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
-                <h2 className="text-lg font-semibold mb-4 text-skin-title">Tags</h2>
+                <h2 className="text-lg font-semibold mb-4 text-skin-title">
+                  Tags
+                </h2>
                 <div className="flex flex-wrap gap-2 text-sm">
                   <span className="px-2 py-1 rounded border border-border bg-skin-bg text-skin-title">
                     {event?.container_name ?? "service"}
@@ -271,10 +322,19 @@ export default function DetailPage() {
                   </span>
                   <span className="px-2 py-1 rounded border border-border bg-skin-bg text-skin-title">
                     {event?.severity
-                      ? event.severity.charAt(0).toUpperCase() + event.severity.slice(1)
+                      ? event.severity.charAt(0).toUpperCase() +
+                        event.severity.slice(1)
                       : "TypeError"}
                   </span>
-                  <span className="px-2 py-1 rounded border border-destructive/30 text-destructive">
+                  <span
+                    className={`px-2 py-1 rounded border ${
+                      event?.severity === "error"
+                        ? "border-destructive/30 text-destructive"
+                        : event?.severity === "warning"
+                        ? "border-[var(--yellow)]/30 text-[var(--yellow)]"
+                        : "border-border text-skin-subtitle"
+                    }`}
+                  >
                     {event?.severity === "error"
                       ? "High"
                       : event?.severity === "warning"
@@ -284,11 +344,13 @@ export default function DetailPage() {
                 </div>
               </div>
 
-              {/* Related Logs (igual layout, datos reales) */}
+              {/* Related Logs */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 flex-1 shadow-elev-1">
-                <h2 className="text-lg font-semibold mb-1 text-skin-title">Related Logs</h2>
+                <h2 className="text-lg font-semibold mb-1 text-skin-title">
+                  Related Logs
+                </h2>
                 <p className="text-sm text-skin-subtitle mb-4">
-                  Other events around this time or service
+                  Other events with this message
                 </p>
                 <div className="space-y-4">
                   {related.map((log) => (
@@ -316,13 +378,21 @@ export default function DetailPage() {
                           {new Date(log.created_at).toLocaleTimeString()}
                         </span>
                       </div>
-                      <p className="text-skin-title">{log.log_message}</p>
-                      <p className="text-xs text-skin-subtitle">Service: {log.container_name}</p>
+                      <p className="text-skin-title">
+                        {log.log_message.length > 100
+                          ? log.log_message.slice(0, 100) + "..."
+                          : log.log_message}
+                      </p>
+                      <p className="text-xs text-skin-subtitle">
+                        Service: {log.container_name}
+                      </p>
                     </div>
                   ))}
 
                   {!loading && related.length === 0 && (
-                    <div className="text-skin-subtitle text-sm">No related logs</div>
+                    <div className="text-skin-subtitle text-sm">
+                      No related logs found.
+                    </div>
                   )}
                 </div>
               </div>

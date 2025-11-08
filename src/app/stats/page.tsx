@@ -73,7 +73,6 @@ export default function StatsPage() {
       <Navbar />
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-6xl mx-auto space-y-10">
-          <h1 className="text-3xl font-bold mb-6">"Noisy App" Statistics</h1>
 
           {loading && (
              <div className="flex h-64 items-center justify-center">

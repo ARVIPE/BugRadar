@@ -82,6 +82,7 @@ export default function Navbar() {
             <li><a href="/stats" className={linkClass("/stats")}>Stats</a></li>
             <li><a href="/insight" className={linkClass("/insight")}>Insight</a></li>
             <li><a href="/settings" className={linkClass("/settings")}>Settings</a></li>
+            <a href="/projects" className={`block ${linkClass("/projects")}`}>Projects</a>
           </ul>
         </div>
 
@@ -148,6 +149,7 @@ export default function Navbar() {
           <a href="/stats" className={`block ${linkClass("/stats")}`}>Stats</a>
           <a href="/insight" className={`block ${linkClass("/insight")}`}>Insight</a>
           <a href="/settings" className={`block ${linkClass("/settings")}`}>Settings</a>
+          <a href="/projects" className={`block ${linkClass("/projects")}`}>Projects</a>
         </div>
       )}
     </nav>

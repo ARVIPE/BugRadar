@@ -7,7 +7,6 @@ import { createHash } from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Tu patrón de cliente admin (Service Role)
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -15,14 +14,13 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-// --- Helper de API Key (para el agente) ---
 async function getProjectIdFromApiKey(
   apiKey: string
 ): Promise<string | null> {
   if (!apiKey.startsWith("proj_")) {
     return null;
   }
-  const hashedKey = createHash("sha256").update(apiKey).digest("hex");
+  const hashedKey = createHash("sha26").update(apiKey).digest("hex");
   const { data, error } = await supabase()
     .from("project_api_keys")
     .select("project_id")
@@ -35,14 +33,11 @@ async function getProjectIdFromApiKey(
   }
   return data.project_id;
 }
-// --- Fin del Helper ---
 
-// 1. ESQUEMA CORREGIDO: 'user_id' ha sido eliminado
 const LogSchema = z.object({
   log_message: z.string().min(1),
   container_name: z.string().min(1),
   severity: z.enum(["info", "warning", "error"]),
-  // user_id: z.string().uuid(), // <-- ELIMINADO
 });
 
 export async function POST(req: Request) {
@@ -86,7 +81,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: error.message }, { status: 500 });
 
     // 3. LÓGICA DE EMAIL CORREGIDA
-    if (parsed.data.severity === 'error') {
+    if (parsed.data.severity === "error") {
       try {
         // En lugar de `parsed.data.user_id`, buscamos el user_id desde el project_id
         const { data: projectData, error: projectError } = await supabase()
@@ -94,12 +89,15 @@ export async function POST(req: Request) {
           .select("user_id")
           .eq("id", projectId)
           .single();
-        
+
         if (projectError || !projectData) {
-           console.error("Error al buscar proyecto para enviar email:", projectError);
-           // No paramos la ejecución, solo logueamos el error
+          console.error(
+            "Error al buscar proyecto para enviar email:",
+            projectError
+          );
+          // No paramos la ejecución, solo logueamos el error
         }
-        
+
         if (projectData && projectData.user_id) {
           const userEmail = await getUserEmailById(projectData.user_id);
           if (userEmail) {
@@ -117,7 +115,9 @@ export async function POST(req: Request) {
               `Correo de error enviado a ${notifyEmail} (usuario: ${userEmail})`
             );
           } else {
-            console.warn(`Usuario con ID ${projectData.user_id} no encontrado. No se enviará notificación.`);
+            console.warn(
+              `Usuario con ID ${projectData.user_id} no encontrado. No se enviará notificación.`
+            );
           }
         }
       } catch (emailError) {
@@ -136,14 +136,14 @@ export async function POST(req: Request) {
   }
 }
 
-// La función GET (que usa el Dashboard) ya debería estar correcta
-// (la actualizamos en el paso anterior)
+// --- CAMBIOS EN LA FUNCIÓN GET ---
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const projectId = searchParams.get("project_id");
     const containerName = searchParams.get("container_name");
     const severity = searchParams.get("severity");
+    const logMessage = searchParams.get("log_message"); // <-- El log de la página de detalle
     const limit = Number(searchParams.get("limit") ?? 100);
 
     if (!projectId) {
@@ -152,7 +152,7 @@ export async function GET(req: Request) {
         { status: 400 }
       );
     }
-    
+
     // NOTA: Esta query necesita un cliente de 'auth' o RLS en la tabla 'events'
     // para ser 100% segura, pero asumimos que ya lo hicimos
     // en los ficheros del dashboard (api/metrics, api/activity)
@@ -163,8 +163,31 @@ export async function GET(req: Request) {
       .order("created_at", { ascending: false })
       .limit(limit);
 
-    if (containerName) q = q.eq("container_name", containerName);
-    if (severity) q = q.eq("severity", severity);
+   if (logMessage) {
+      // Si 'logMessage' está presente, estamos en la "Página de Detalle"
+      // e intentamos buscar por el 'msg' interno.
+      try {
+        const parsedLog = JSON.parse(logMessage);
+        const errorMsg = parsedLog.msg;
+        
+        if (errorMsg) {
+          // ¡Usa 'like' para buscar el mensaje de error dentro del JSON!
+          // Esto encontrará "cache near capacity" en todos los logs.
+          q = q.like("log_message", `%${errorMsg}%`);
+        } else {
+          // Fallback si 'msg' no existe
+          q = q.eq("log_message", logMessage);
+        }
+      } catch (e) {
+        // Fallback si no es un JSON
+        q = q.eq("log_message", logMessage);
+      }
+    } else {
+      // Si no hay 'logMessage', estamos en el "Dashboard"
+      if (containerName) q = q.eq("container_name", containerName);
+      if (severity) q = q.eq("severity", severity);
+    }
+    // --- FIN DE LÓGICA DE FILTRO ---
 
     const { data, error } = await q;
     if (error)
@@ -179,6 +202,7 @@ export async function GET(req: Request) {
     );
   }
 }
+// --- FIN DE CAMBIOS EN GET ---
 
 // Función helper (no cambia)
 async function getUserEmailById(userId: string): Promise<string | null> {
