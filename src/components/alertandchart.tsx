@@ -1,4 +1,5 @@
 "use client";
+
 import {
   LineChart,
   Line,
@@ -9,11 +10,12 @@ import {
   CartesianGrid,
 } from "recharts";
 import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react"; // Importar spinner
+import { Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 type RecoveryData = {
   date: string;
-  value: number; // 'value' sigue siendo el nombre que usa Recharts
+  value: number;
 };
 
 interface AlertAndChartProps {
@@ -23,6 +25,7 @@ interface AlertAndChartProps {
 export default function AlertAndChart({ projectId }: AlertAndChartProps) {
   const [data, setData] = useState<RecoveryData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const t = useTranslations("AlertAndChart");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,12 +58,9 @@ export default function AlertAndChart({ projectId }: AlertAndChartProps) {
   return (
     <div className="grid grid-cols-1 gap-6 mt-10">
       <div className="col-span-1 md:col-span-2 bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-        
-        {/* --- CAMBIO AQUÍ --- */}
         <h3 className="text-skin-title font-semibold text-sm mb-4">
-          Tiempo de Recuperación Promedio (Mins) - Últimos 7 días
+          {t("title")}
         </h3>
-        {/* --- FIN DEL CAMBIO --- */}
 
         <div className="h-48 w-full">
           {isLoading ? (
@@ -69,7 +69,7 @@ export default function AlertAndChart({ projectId }: AlertAndChartProps) {
             </div>
           ) : data.length === 0 ? (
             <div className="flex items-center justify-center h-full text-skin-subtitle">
-              No hay eventos resueltos en los últimos 7 días.
+              {t("empty")}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">
@@ -96,7 +96,7 @@ export default function AlertAndChart({ projectId }: AlertAndChartProps) {
                 <Line
                   type="monotone"
                   dataKey="value"
-                  name="Minutos" // Tooltip
+                  name={t("tooltipLabel")}
                   stroke="var(--strokeLine)"
                   strokeWidth={2}
                   dot={{ r: 4, fill: "var(--strokeLine)" }}

@@ -1,10 +1,11 @@
-// src/components/navbar.tsx
 "use client"
+
 import Image from "next/image"
-import { Bell, Cog, Menu, Search, X, Moon, Sun, User, LogOut } from "lucide-react"
+import { Cog, Menu, X, User, LogOut, Globe } from "lucide-react"
 import { useState, useEffect, useRef } from "react"
 import { usePathname } from "next/navigation"
-import { signOut, useSession } from "next-auth/react" // NUEVO: Importamos useSession
+import { signOut, useSession } from "next-auth/react"
+import { useLocale, useTranslations } from "next-intl"
 
 export default function Navbar() {
   const { data: session } = useSession()
@@ -13,15 +14,16 @@ export default function Navbar() {
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
   const profileMenuRef = useRef<HTMLDivElement>(null)
   const pathname = usePathname()
+  const locale = useLocale()
+  const t = useTranslations("Navbar")
 
-  // ... (toda la lógica de los hooks se mantiene igual)
+  const nextLocale = locale === "en" ? "es" : "en"
+
   const applyTheme = (t: string) => {
     document.documentElement.className = t
   }
 
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem("theme") : null
-   // const initial = stored === "theme-light" || stored === "theme-dark" ? stored : theme
     const initial = "theme-dark"
     setTheme(initial)
     applyTheme(initial)
@@ -48,86 +50,121 @@ export default function Navbar() {
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
-        setIsProfileMenuOpen(false);
+        setIsProfileMenuOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside)
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [profileMenuRef]);
+      document.removeEventListener("mousedown", handleClickOutside)
+    }
+  }, [profileMenuRef])
 
+  const withLocale = (path: string) => `/${locale}${path}`
 
-  const toggleTheme = () => {
-    const newTheme = theme === "theme-dark" ? "theme-light" : "theme-dark"
-    setTheme(newTheme)
-  }
-  
   const linkClass = (href: string) =>
     pathname && pathname.startsWith(href)
       ? "text-[var(--yellow)]"
       : "text-skin-title hover:text-skin-subtitle transition-colors"
 
+  const handleChangeLocale = () => {
+    const segments = pathname.split("/")
+    segments[1] = nextLocale
+    const newPath = segments.join("/") || "/"
+    window.location.href = newPath
+  }
+
+  const handleLogout = () => {
+    signOut({ callbackUrl: `/${locale}` })
+  }
+
   return (
     <nav className="bg-skin-panel p-4 shadow-sm border-b border-border">
-      <div className=" mx-auto flex items-center justify-between">
-        {/* ... (logo y navegación principal se mantienen igual) ... */}
-         <div className="flex items-center space-x-2">
-          <a href="/dashboard" className="flex items-center space-x-2">
+      <div className="mx-auto flex items-center justify-between">
+        {/* izquierda */}
+        <div className="flex items-center space-x-2">
+          <a href={withLocale("/dashboard")} className="flex items-center space-x-2">
             <Image src="/bugradar-logo.png" alt="BugRadar Logo" width={28} height={28} />
             <span className="text-skin-title font-semibold text-lg">BugRadar</span>
           </a>
           <ul className="hidden md:flex ml-5 items-center space-x-6 text-sm font-medium">
-            <li><a href="/dashboard" className={linkClass("/dashboard")}>Dashboard</a></li>
-            <li><a href="/stats" className={linkClass("/stats")}>Stats</a></li>
-            <li><a href="/insight" className={linkClass("/insight")}>Insight</a></li>
-            <li><a href="/settings" className={linkClass("/settings")}>Settings</a></li>
-            <a href="/projects" className={`block ${linkClass("/projects")}`}>Projects</a>
+            <li>
+              <a href={withLocale("/dashboard")} className={linkClass(withLocale("/dashboard"))}>
+                {t("dashboard")}
+              </a>
+            </li>
+            <li>
+              <a href={withLocale("/stats")} className={linkClass(withLocale("/stats"))}>
+                {t("stats")}
+              </a>
+            </li>
+            <li>
+              <a href={withLocale("/insight")} className={linkClass(withLocale("/insight"))}>
+                {t("insight")}
+              </a>
+            </li>
+            <li>
+              <a href={withLocale("/settings")} className={linkClass(withLocale("/settings"))}>
+                {t("settings")}
+              </a>
+            </li>
+            <li>
+              <a href={withLocale("/projects")} className={linkClass(withLocale("/projects"))}>
+                {t("projects")}
+              </a>
+            </li>
           </ul>
         </div>
 
-        {/* Derecha: Iconos y menú de perfil */}
+        {/* derecha */}
         <div className="flex items-center space-x-4">
-          {/*<button className="text-skin-subtitle hover:text-[var(--primary)]"><Bell size={20} /></button>*/}
-          <a href="/settings" className="text-skin-subtitle hover:text-[var(--primary)]"><Cog size={20} /></a>
-           {/*
+          {/* idioma */}
           <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-skin-subtitle hover:text-[var(--primary)] hover:bg-[var(--color-input)] transition-all duration-200"
-            aria-label="Toggle theme"
+            onClick={handleChangeLocale}
+            className="hidden md:flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-skin-title hover:bg-skin-bg transition-colors"
           >
-            {theme === "theme-dark" ? <Sun size={20} className="text-[var(--yellow)]" /> : <Moon size={20} className="text-skin-title" />}
-          </button>*/}
+            <Globe size={14} />
+            {locale === "en" ? "EN" : "ES"}
+          </button>
 
-          {/* Contenedor del menú de perfil */}
+          <a
+            href={withLocale("/settings")}
+            className="text-skin-subtitle hover:text-[var(--primary)]"
+            aria-label="Settings"
+          >
+            <Cog size={20} />
+          </a>
+
+          {/* perfil */}
           <div className="relative" ref={profileMenuRef}>
             <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}>
               <Image
-                // NUEVO: Usamos la imagen de la sesión, con un fallback a la imagen por defecto.
-                src={session?.user?.image || "/A1.jpg"} 
+                src={session?.user?.image || "/A1.jpg"}
                 alt="User Avatar"
                 width={32}
                 height={32}
-                className="rounded-full border border-border cursor-pointer bg-gray-500" // Añadimos un fondo por si la imagen tarda en cargar
+                className="rounded-full border border-border cursor-pointer bg-gray-500"
               />
             </button>
-            
+
             {isProfileMenuOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-skin-panel border border-border rounded-md shadow-lg z-10">
                 <ul className="py-1">
                   <li>
-                    <a href="/settings" className="flex items-center px-4 py-2 text-sm text-skin-title hover:bg-skin-bg">
+                    <a
+                      href={withLocale("/settings")}
+                      className="flex items-center px-4 py-2 text-sm text-skin-title hover:bg-skin-bg"
+                    >
                       <User size={14} className="mr-2" />
-                      Cambiar foto
+                      {t("changePhoto")}
                     </a>
                   </li>
                   <li>
                     <button
-                      onClick={() => signOut({ callbackUrl: '/' })}
+                      onClick={handleLogout}
                       className="flex items-center w-full text-left px-4 py-2 text-sm text-skin-title hover:bg-skin-bg"
                     >
                       <LogOut size={14} className="mr-2" />
-                      Cerrar Sesión
+                      {t("logout")}
                     </button>
                   </li>
                 </ul>
@@ -135,21 +172,41 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Menú móvil */}
-          <button className="md:hidden text-skin-subtitle hover:text-skin-title" onClick={() => setIsOpen(!isOpen)}>
+          {/* móvil */}
+          <button
+            className="md:hidden text-skin-subtitle hover:text-skin-title"
+            onClick={() => setIsOpen(!isOpen)}
+          >
             {isOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </div>
       </div>
 
-      {/* ... (el desplegable del menú móvil se mantiene igual) ... */}
-       {isOpen && (
+      {/* menú móvil */}
+      {isOpen && (
         <div className="md:hidden mt-3 space-y-3 px-2">
-          <a href="/dashboard" className={`block font-medium ${linkClass("/dashboard")}`}>Dashboard</a>
-          <a href="/stats" className={`block ${linkClass("/stats")}`}>Stats</a>
-          <a href="/insight" className={`block ${linkClass("/insight")}`}>Insight</a>
-          <a href="/settings" className={`block ${linkClass("/settings")}`}>Settings</a>
-          <a href="/projects" className={`block ${linkClass("/projects")}`}>Projects</a>
+          <a href={withLocale("/dashboard")} className={`block font-medium ${linkClass(withLocale("/dashboard"))}`}>
+            {t("dashboard")}
+          </a>
+          <a href={withLocale("/stats")} className={`block ${linkClass(withLocale("/stats"))}`}>
+            {t("stats")}
+          </a>
+          <a href={withLocale("/insight")} className={`block ${linkClass(withLocale("/insight"))}`}>
+            {t("insight")}
+          </a>
+          <a href={withLocale("/settings")} className={`block ${linkClass(withLocale("/settings"))}`}>
+            {t("settings")}
+          </a>
+          <a href={withLocale("/projects")} className={`block ${linkClass(withLocale("/projects"))}`}>
+            {t("projects")}
+          </a>
+          <button
+            onClick={handleChangeLocale}
+            className="inline-flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-skin-title hover:bg-skin-bg transition-colors"
+          >
+            <Globe size={14} />
+            {locale === "en" ? "EN" : "ES"}
+          </button>
         </div>
       )}
     </nav>

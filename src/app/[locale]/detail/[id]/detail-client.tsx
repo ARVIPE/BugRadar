@@ -3,7 +3,7 @@
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Code, Share2 } from "lucide-react";
+import { ArrowLeft, Share2 } from "lucide-react";
 import { useRouter, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -14,7 +14,7 @@ import {
   YAxis,
   Tooltip,
 } from "recharts";
-import { set } from "zod";
+import { useLocale, useTranslations } from "next-intl";
 
 type EventItem = {
   id: string;
@@ -22,13 +22,19 @@ type EventItem = {
   severity: "info" | "warning" | "error";
   log_message: string;
   container_name: string;
-  project_id: string; // <-- Importante que el tipo incluya esto
+  project_id: string;
   status?: "open" | "resolved" | "ignored";
 };
 
-export default function DetailPage() {
+type RecurrenceData = {
+  date: string;
+  value: number;
+};
+
+export default function DetailPage({ id }: { id: string }) {
   const router = useRouter();
-  const { id } = useParams<{ id: string }>();
+  const locale = useLocale();
+  const t = useTranslations("Detail");
 
   const [event, setEvent] = useState<EventItem | null>(null);
   const [related, setRelated] = useState<EventItem[]>([]);
@@ -39,11 +45,6 @@ export default function DetailPage() {
   const [recurrenceData, setRecurrenceData] = useState<RecurrenceData[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
 
-  type RecurrenceData = {
-    date: string;
-    value: number;
-  };
-
   useEffect(() => {
     let mounted = true;
 
@@ -51,15 +52,14 @@ export default function DetailPage() {
       setLoading(true);
       setChartLoading(true);
       try {
-        // 1. Carga el evento principal (esto estaba bien)
+        // 1. evento principal
         const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Not found");
         const ev: EventItem = await res.json();
         if (!mounted) return;
         setEvent(ev);
 
-        // --- INICIO DE CAMBIOS ---
-        // 2. Carga la recurrencia USANDO el project_id y log_message del evento
+        // 2. recurrencia por project_id + log_message
         try {
           const recurrenceRes = await fetch(
             `/api/recurrence?project_id=${
@@ -80,15 +80,13 @@ export default function DetailPage() {
           if (mounted) setChartLoading(false);
         }
 
-        // 3. Carga los logs relacionados USANDO el project_id y log_message
+        // 3. logs relacionados
         const relRes = await fetch(
           `/api/logs?project_id=${
             ev.project_id
           }&log_message=${encodeURIComponent(ev.log_message)}&limit=10`,
           { cache: "no-store" }
         );
-        // --- FIN DE CAMBIOS ---
-
         const relJson = await relRes.json();
         const others: EventItem[] = (relJson.items ?? []).filter(
           (x: EventItem) => x.id !== ev.id
@@ -108,24 +106,22 @@ export default function DetailPage() {
     };
   }, [id]);
 
-  // ... (El resto de tu fichero .tsx no necesita cambios) ...
-  // ... (pega el resto de tu código aquí: title, ts, act, handleBack, y todo el return) ...
-
   const title = useMemo(() => {
-    if (!event) return "Log not found";
-    // Intenta parsear el JSON para un título más limpio
+    if (!event) return t("notFound");
     try {
       const parsed = JSON.parse(event.log_message);
       if (parsed.msg) return parsed.msg;
     } catch (e) {
-      // fallback
+      // ignore
     }
     return event.log_message.length > 150
       ? event.log_message.slice(0, 150) + "…"
       : event.log_message;
-  }, [event]);
+  }, [event, t]);
 
-  const ts = event ? new Date(event.created_at).toUTCString() : "";
+  const ts = event
+    ? new Date(event.created_at).toUTCString()
+    : t("timestampExample");
 
   async function act(action: "resolve" | "ignore") {
     if (!id) return;
@@ -143,14 +139,14 @@ export default function DetailPage() {
       if (!res.ok) throw new Error(json?.error || "Failed");
       setEvent(json.event);
     } catch (e: any) {
-      setErrorMsg(e?.message || "Unexpected error");
+      setErrorMsg(e?.message || t("unexpectedError"));
     } finally {
       setSaving(null);
     }
   }
 
   const handleBack = () => {
-    router.push("/dashboard");
+    router.push(`/${locale}/dashboard`);
   };
 
   return (
@@ -161,19 +157,20 @@ export default function DetailPage() {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              {loading ? "Loading…" : title}
+              {loading ? t("loading") : title}
             </h1>
             {!loading && (
               <p className="text-sm text-skin-subtitle">
-                {ts} • {event?.container_name} • {event?.severity?.toUpperCase()}
+                {ts} • {event?.container_name} •{" "}
+                {event?.severity?.toUpperCase()}
                 {event?.status
-                  ? ` • STATUS: ${event.status.toUpperCase()}`
+                  ? ` • ${t("statusLabel")}: ${event.status.toUpperCase()}`
                   : ""}
               </p>
             )}
             <Button onClick={handleBack} className="mt-4">
               <ArrowLeft size={16} className="mr-2" />
-              Back to Dashboard
+              {t("back")}
             </Button>
           </div>
 
@@ -184,23 +181,19 @@ export default function DetailPage() {
               {/* Error Details */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
                 <h2 className="text-lg font-semibold mb-2 text-skin-title">
-                  Error Details
+                  {t("errorDetails")}
                 </h2>
                 <p className="text-sm text-skin-subtitle mb-4">
-                  {loading
-                    ? "Loading…"
-                    : "Detalles extraídos del log."}
+                  {loading ? t("loading") : t("errorDescription")}
                 </p>
 
-                {/* Mensaje crudo */}
                 {!loading && (
                   <pre className="mt-4 text-xs whitespace-pre-wrap bg-skin-bg p-3 rounded border border-border">
-                    {/* Formateo bonito si es JSON */}
                     {(() => {
                       try {
                         const parsed = JSON.parse(event?.log_message ?? "{}");
                         return JSON.stringify(parsed, null, 2);
-                      } catch(e) {
+                      } catch (e) {
                         return event?.log_message;
                       }
                     })()}
@@ -211,19 +204,19 @@ export default function DetailPage() {
               {/* Recurrence History */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 flex-1 flex flex-col shadow-elev-1">
                 <h2 className="text-lg font-semibold mb-1 text-skin-title">
-                  Recurrence History
+                  {t("recurrenceTitle")}
                 </h2>
                 <p className="text-sm text-skin-subtitle mb-4">
-                  Occurrences over the last 7 days
+                  {t("recurrenceSubtitle")}
                 </p>
                 <div className="flex-grow min-h-[300px]">
                   {chartLoading ? (
                     <div className="flex items-center justify-center h-full text-skin-subtitle">
-                      Loading chart…
+                      {t("loadingChart")}
                     </div>
                   ) : recurrenceData.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-skin-subtitle">
-                      No recurrence data available.
+                      {t("noRecurrence")}
                     </div>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
@@ -236,7 +229,7 @@ export default function DetailPage() {
                         <YAxis
                           stroke="var(--color-subtitle)"
                           fontSize={12}
-                          allowDecimals={false} // Para no mostrar 0.5, 1.5, etc.
+                          allowDecimals={false}
                         />
                         <Tooltip
                           contentStyle={{
@@ -252,7 +245,6 @@ export default function DetailPage() {
                         <Line
                           type="monotone"
                           dataKey="value"
-                          name="Count"
                           stroke="var(--yellow)"
                           strokeWidth={2}
                           dot={{
@@ -274,7 +266,7 @@ export default function DetailPage() {
               {/* Actions */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
                 <h2 className="text-lg font-semibold mb-4 text-skin-title">
-                  Actions
+                  {t("actions")}
                 </h2>
                 <Button
                   className="w-full mb-2"
@@ -282,7 +274,7 @@ export default function DetailPage() {
                   onClick={() => act("resolve")}
                   disabled={saving !== null}
                 >
-                  {saving === "resolve" ? "Marking…" : "Mark as Resolved"}
+                  {saving === "resolve" ? t("marking") : t("markResolved")}
                 </Button>
                 <Button
                   variant="outline"
@@ -290,10 +282,10 @@ export default function DetailPage() {
                   onClick={() => act("ignore")}
                   disabled={saving !== null}
                 >
-                  {saving === "ignore" ? "Ignoring…" : "Ignore Error"}
+                  {saving === "ignore" ? t("ignoring") : t("ignore")}
                 </Button>
                 <Button variant="ghost" className="w-full">
-                  <Share2 size={16} className="mr-2" /> Share Error
+                  <Share2 size={16} className="mr-2" /> {t("share")}
                 </Button>
 
                 {errorMsg && (
@@ -302,7 +294,7 @@ export default function DetailPage() {
 
                 {event?.status && (
                   <p className="mt-2 text-xs text-skin-subtitle">
-                    Status:{" "}
+                    {t("statusLabel")}:{" "}
                     <span className="text-skin-title">{event.status}</span>
                   </p>
                 )}
@@ -311,7 +303,7 @@ export default function DetailPage() {
               {/* Tags */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 shadow-elev-1">
                 <h2 className="text-lg font-semibold mb-4 text-skin-title">
-                  Tags
+                  {t("tags")}
                 </h2>
                 <div className="flex flex-wrap gap-2 text-sm">
                   <span className="px-2 py-1 rounded border border-border bg-skin-bg text-skin-title">
@@ -336,10 +328,10 @@ export default function DetailPage() {
                     }`}
                   >
                     {event?.severity === "error"
-                      ? "High"
+                      ? t("severityHigh")
                       : event?.severity === "warning"
-                      ? "Medium"
-                      : "Low"}
+                      ? t("severityMedium")
+                      : t("severityLow")}
                   </span>
                 </div>
               </div>
@@ -347,10 +339,10 @@ export default function DetailPage() {
               {/* Related Logs */}
               <div className="bg-skin-panel rounded-lg border border-border p-5 flex-1 shadow-elev-1">
                 <h2 className="text-lg font-semibold mb-1 text-skin-title">
-                  Related Logs
+                  {t("relatedLogs")}
                 </h2>
                 <p className="text-sm text-skin-subtitle mb-4">
-                  Other events with this message
+                  {t("relatedLogsSubtitle")}
                 </p>
                 <div className="space-y-4">
                   {related.map((log) => (
@@ -369,10 +361,10 @@ export default function DetailPage() {
                           }`}
                         >
                           {log.severity === "error"
-                            ? "High"
+                            ? t("badgeHigh")
                             : log.severity === "warning"
-                            ? "Warning"
-                            : "Info"}
+                            ? t("badgeWarning")
+                            : t("badgeInfo")}
                         </span>
                         <span className="text-xs text-skin-subtitle">
                           {new Date(log.created_at).toLocaleTimeString()}
@@ -384,14 +376,14 @@ export default function DetailPage() {
                           : log.log_message}
                       </p>
                       <p className="text-xs text-skin-subtitle">
-                        Service: {log.container_name}
+                        {t("serviceLabel")} {log.container_name}
                       </p>
                     </div>
                   ))}
 
                   {!loading && related.length === 0 && (
                     <div className="text-skin-subtitle text-sm">
-                      No related logs found.
+                      {t("noRelated")}
                     </div>
                   )}
                 </div>

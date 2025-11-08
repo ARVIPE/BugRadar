@@ -1,6 +1,8 @@
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 type Ev = {
   id: string;
@@ -17,10 +19,8 @@ interface LogStreamProps {
 
 const SCROLL_HEIGHT_CLASS = "max-h-[420px]";
 
-// función de comparación sencilla para evitar rerenders inútiles
 function sameEvents(a: Ev[], b: Ev[]) {
   if (a.length !== b.length) return false;
-  // comparamos entrada por entrada; si en tu caso el orden puede cambiar, aquí habría que hacer algo más robusto
   for (let i = 0; i < a.length; i++) {
     const ea = a[i];
     const eb = b[i];
@@ -39,7 +39,10 @@ function sameEvents(a: Ev[], b: Ev[]) {
 }
 
 export default function LogStream({ projectId }: LogStreamProps) {
-  const [activeTab, setActiveTab] = useState<string>("Errors (0)");
+  const locale = useLocale();
+  const t = useTranslations("LogStream");
+
+  const [activeTab, setActiveTab] = useState<"errors" | "warnings" | "closed" | "metrics">("errors");
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<Ev[]>([]);
   const [loading, setLoading] = useState(true);
@@ -55,25 +58,20 @@ export default function LogStream({ projectId }: LogStreamProps) {
         return;
       }
 
-      // solo la primera vez mostramos loading
       if (isFirstLoad && mounted) {
         setLoading(true);
       }
 
       try {
-        const res = await fetch(
-          `/api/logs?project_id=${projectId}&limit=300`,
-          { cache: "no-store" }
-        );
+        const res = await fetch(`/api/logs?project_id=${projectId}&limit=300`, {
+          cache: "no-store",
+        });
         if (!mounted) return;
         const json = await res.json();
         const incoming: Ev[] = json.items ?? [];
 
-        // 👇 aquí está la clave: solo actualizamos si realmente cambió
         setEvents((prev) => {
-          if (sameEvents(prev, incoming)) {
-            return prev; // no forzar rerender
-          }
+          if (sameEvents(prev, incoming)) return prev;
           return incoming;
         });
       } catch (err) {
@@ -97,7 +95,6 @@ export default function LogStream({ projectId }: LogStreamProps) {
     };
   }, [projectId]);
 
-  // Contadores por tab
   const counts = useMemo(() => {
     const isOpen = (e: Ev) => (e.status ?? "open") === "open";
     const isClosed = (e: Ev) =>
@@ -114,25 +111,12 @@ export default function LogStream({ projectId }: LogStreamProps) {
     return { eOpen, wOpen, closed };
   }, [events]);
 
-  const tabs = useMemo(() => {
-    const errors = `Errors (${counts.eOpen})`;
-    const warnings = `Warnings (${counts.wOpen})`;
-    const debug = `Debug (${counts.closed})`;
-    const metrics = "Metrics";
-
-    const currentType = activeTab.split(" ")[0];
-    const newMap: Record<string, string> = {
-      Errors: errors,
-      Warnings: warnings,
-      Debug: debug,
-      Metrics: metrics,
-    };
-    const nextActive = newMap[currentType] ?? errors;
-    if (activeTab !== nextActive) setActiveTab(nextActive);
-
-    return [errors, warnings, debug, metrics];
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [counts.eOpen, counts.wOpen, counts.closed]);
+  const tabs = [
+    { key: "errors" as const, label: `${t("tabErrors")} (${counts.eOpen})` },
+    { key: "warnings" as const, label: `${t("tabWarnings")} (${counts.wOpen})` },
+    { key: "closed" as const, label: `${t("tabClosed")} (${counts.closed})` },
+    { key: "metrics" as const, label: t("tabMetrics") },
+  ];
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -142,11 +126,11 @@ export default function LogStream({ projectId }: LogStreamProps) {
 
     let base = events;
 
-    if (activeTab.startsWith("Errors"))
+    if (activeTab === "errors")
       base = base.filter((e) => e.severity === "error" && isOpen(e));
-    else if (activeTab.startsWith("Warnings"))
+    else if (activeTab === "warnings")
       base = base.filter((e) => e.severity === "warning" && isOpen(e));
-    else if (activeTab.startsWith("Debug")) base = base.filter(isClosed);
+    else if (activeTab === "closed") base = base.filter(isClosed);
 
     if (q) {
       base = base.filter(
@@ -156,41 +140,42 @@ export default function LogStream({ projectId }: LogStreamProps) {
           x.severity.toLowerCase().includes(q) ||
           (x.status ?? "open").toLowerCase().includes(q) ||
           new Date(x.created_at)
-            .toLocaleDateString("en-GB")
+            .toLocaleDateString(locale)
             .toLowerCase()
             .includes(q.toLowerCase())
       );
     }
     return base;
-  }, [events, activeTab, query]);
+  }, [events, activeTab, query, locale]);
 
   const logs = useMemo(
     () =>
       filtered.map((ev) => ({
         id: ev.id,
-        time: new Date(ev.created_at).toLocaleString(),
+        time: new Date(ev.created_at).toLocaleString(locale),
         severity:
           ev.severity === "error"
-            ? "Error"
+            ? t("severityError")
             : ev.severity === "warning"
-            ? "Warning"
+            ? t("severityWarning")
             : "",
         message: ev.log_message,
         service: ev.container_name || "—",
         status: ev.status ?? "open",
       })),
-    [filtered]
+    [filtered, locale, t]
   );
 
   return (
     <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6 mt-10">
-      <h2 className="text-xl font-semibold text-skin-title mb-4">Log Stream</h2>
+      <h2 className="text-xl font-semibold text-skin-title mb-4">
+        {t("title")}
+      </h2>
 
-      {/* Top bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
         <input
           type="text"
-          placeholder="Search logs..."
+          placeholder={t("searchPlaceholder")}
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           className="w-full md:w-1/3 px-3 py-2 text-sm bg-skin-input border border-border rounded-md
@@ -199,20 +184,19 @@ export default function LogStream({ projectId }: LogStreamProps) {
         />
       </div>
 
-      {/* Tabs */}
       <div className="flex bg-skin-bg rounded-md overflow-x-auto text-sm font-medium mb-4">
         {tabs.map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
             className={`px-4 py-2 flex-1 transition-colors
               ${
-                activeTab === tab
+                activeTab === tab.key
                   ? "bg-primary text-primary-foreground font-semibold"
                   : "text-skin-subtitle hover:text-skin-title hover:bg-skin-panel"
               }`}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>
@@ -220,20 +204,18 @@ export default function LogStream({ projectId }: LogStreamProps) {
       {/* Desktop */}
       <div className="hidden md:block">
         <div className="grid grid-cols-5 px-3 py-2 text-xs uppercase text-skin-subtitle border-b border-border">
-          <div>Timestamp</div>
-          <div>Severity</div>
-          <div>Message</div>
-          <div>Service</div>
-          <div className="text-right">Actions</div>
+          <div>{t("colTimestamp")}</div>
+          <div>{t("colSeverity")}</div>
+          <div>{t("colMessage")}</div>
+          <div>{t("colService")}</div>
+          <div className="text-right">{t("colActions")}</div>
         </div>
 
         <div className={`${SCROLL_HEIGHT_CLASS} overflow-y-auto scrollbar-thin`}>
           {loading ? (
-            <div className="px-3 py-4 text-skin-subtitle">Loading…</div>
+            <div className="px-3 py-4 text-skin-subtitle">{t("loading")}</div>
           ) : logs.length === 0 ? (
-            <div className="px-3 py-4 text-skin-subtitle">
-              No logs found for this project.
-            </div>
+            <div className="px-3 py-4 text-skin-subtitle">{t("empty")}</div>
           ) : (
             logs.map((log) => (
               <div
@@ -244,9 +226,9 @@ export default function LogStream({ projectId }: LogStreamProps) {
                 <div>
                   <span
                     className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
-                      log.severity === "Error"
+                      log.severity === t("severityError")
                         ? "bg-destructive/10 text-destructive"
-                        : log.severity === "Warning"
+                        : log.severity === t("severityWarning")
                         ? "text-[var(--yellow)] bg-[color:var(--yellow)]/10"
                         : "text-skin-subtitle bg-skin-bg"
                     }`}
@@ -262,10 +244,10 @@ export default function LogStream({ projectId }: LogStreamProps) {
                 </div>
                 <div className="text-right">
                   <Link
-                    href={`/detail/${log.id}`}
+                    href={`/${locale}/detail/${log.id}`}
                     className="text-[var(--details-link)] hover:underline"
                   >
-                    View Details
+                    {t("viewDetails")}
                   </Link>
                 </div>
               </div>
@@ -279,27 +261,29 @@ export default function LogStream({ projectId }: LogStreamProps) {
         className={`md:hidden flex flex-col gap-4 ${SCROLL_HEIGHT_CLASS} overflow-y-auto scrollbar-thin`}
       >
         {loading ? (
-          <div className="text-skin-subtitle">Loading…</div>
+          <div className="text-skin-subtitle">{t("loading")}</div>
         ) : logs.length === 0 ? (
-          <div className="text-skin-subtitle">
-            No logs found for this project.
-          </div>
+          <div className="text-skin-subtitle">{t("empty")}</div>
         ) : (
           logs.map((log) => (
             <div
               key={log.id}
               className="border border-border rounded-md p-4 bg-skin-panel shadow-elev-1"
             >
-              <div className="text-xs text-skin-subtitle mb-1">Timestamp</div>
+              <div className="text-xs text-skin-subtitle mb-1">
+                {t("colTimestamp")}
+              </div>
               <div className="mb-2 text-skin-title">{log.time}</div>
 
-              <div className="text-xs text-skin-subtitle mb-1">Severity</div>
+              <div className="text-xs text-skin-subtitle mb-1">
+                {t("colSeverity")}
+              </div>
               <div className="mb-2">
                 <span
                   className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
-                    log.severity === "Error"
+                    log.severity === t("severityError")
                       ? "bg-destructive/10 text-destructive"
-                      : log.severity === "Warning"
+                      : log.severity === t("severityWarning")
                       ? "text-[var(--yellow)] bg-[color:var(--yellow)]/10"
                       : "text-skin-subtitle bg-skin-bg"
                   }`}
@@ -308,18 +292,22 @@ export default function LogStream({ projectId }: LogStreamProps) {
                 </span>
               </div>
 
-              <div className="text-xs text-skin-subtitle mb-1">Message</div>
+              <div className="text-xs text-skin-subtitle mb-1">
+                {t("colMessage")}
+              </div>
               <div className="mb-2 text-skin-title">{log.message}</div>
 
-              <div className="text-xs text-skin-subtitle mb-1">Service</div>
+              <div className="text-xs text-skin-subtitle mb-1">
+                {t("colService")}
+              </div>
               <div className="mb-2 text-skin-title">{log.service}</div>
 
               <div className="text-right mt-2">
                 <Link
-                  href={`/detail/${log.id}`}
+                  href={`/${locale}/detail/${log.id}`}
                   className="text-[var(--primary)] text-sm font-medium hover:underline"
                 >
-                  View Details
+                  {t("viewDetails")}
                 </Link>
               </div>
             </div>

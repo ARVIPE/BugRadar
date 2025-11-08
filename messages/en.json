@@ -1,4 +1,13 @@
 {
+  "Navbar": {
+    "dashboard": "Dashboard",
+    "stats": "Stats",
+    "insight": "Insight",
+    "settings": "Settings",
+    "projects": "Projects",
+    "changePhoto": "Change photo",
+    "logout": "Log out"
+  },
   "Login": {
     "title": "Welcome to BugRadar",
     "subtitle": "Real-time error monitoring for your Docker apps",
@@ -10,5 +19,171 @@
     "signup": "Sign up",
     "errorInvalid": "Email or password is incorrect. Please try again.",
     "quote": "Even bugs deserve to be seen... and reported 👀"
+  },
+  "Signup": {
+    "title": "Create your BugRadar account",
+    "subtitle": "Monitor your apps. Catch bugs early. Sleep better.",
+    "email": "Email",
+    "password": "Password",
+    "confirmPassword": "Confirm password",
+    "errorMismatch": "Passwords do not match 🐞",
+    "submit": "Sign up",
+    "submitting": "Signing up...",
+    "haveAccount": "Already have an account?",
+    "goLogin": "Log in",
+    "quote": "Bugs don't register themselves. Yet. 🐛"
+  },
+  "Dashboard": {
+    "overview": "Dashboard Overview",
+    "activeErrors": "Active Errors",
+    "warningsToday": "Warnings Today",
+    "logsPerHour": "Logs/Hour",
+    "live": "live",
+    "loading": "Loading project..."
+  },
+  "Projects": {
+    "loadingProjects": "Loading your projects...",
+    "loadErrorAuth": "Couldn't load projects. Are you signed in?",
+    "createSuccessTitle": "Project created successfully!",
+    "createSuccessDesc": "Save this API key. You'll need it to configure your agent.",
+    "selectProject": "Select a project",
+    "noProjects": "You don't have any projects yet. Create one!",
+    "createNewTitle": "Or create a new one",
+    "createPlaceholder": "Name of your new app...",
+    "creating": "Creating...",
+    "createButton": "Create project",
+    "createError": "Error creating project. {message}",
+    "deleteConfirmPrompt": "This will permanently delete the project and ALL its logs.\n\nTo confirm, type the project name: \"{projectName}\"",
+    "deleteNameMismatch": "The name does not match. The project was NOT deleted.",
+    "deleteError": "Could not delete the project",
+    "deleteErrorWithMsg": "Error deleting project: {message}"
+  },
+  "LogStream": {
+    "title": "Log Stream",
+    "searchPlaceholder": "Search logs...",
+    "tabErrors": "Errors",
+    "tabWarnings": "Warnings",
+    "tabClosed": "Closed",
+    "tabMetrics": "Metrics",
+    "colTimestamp": "Timestamp",
+    "colSeverity": "Severity",
+    "colMessage": "Message",
+    "colService": "Service",
+    "colActions": "Actions",
+    "loading": "Loading…",
+    "empty": "No logs found for this project.",
+    "viewDetails": "View details",
+    "severityError": "Error",
+    "severityWarning": "Warning"
+  },
+  "AlertAndChart": {
+    "title": "Average Recovery Time (mins) - Last 7 days",
+    "empty": "No resolved events in the last 7 days.",
+    "tooltipLabel": "Minutes"
+  },
+  "RecentActivity": {
+    "title": "Recent activity",
+    "empty": "No recent activity.",
+    "unknownActivity": "Unknown activity.",
+    "newEvent": "New {severity} in {container}.",
+    "resolvedEvent": "Event in {container} marked as resolved by {user}.",
+    "ignoredEvent": "Event in {container} marked as ignored by {user}.",
+    "severity": {
+      "error": "error",
+      "warning": "warning"
+    },
+    "unknownContainer": "unknown container",
+    "unknownUser": "unknown user",
+    "time": {
+      "seconds": "{value}s ago",
+      "minutes": "{value}m ago",
+      "hours": "{value}h ago",
+      "days": "{value}d ago"
+    }
+  },
+  "Detail": {
+    "title": "Unhandled Promise Rejection: Cannot read properties of undefined (reading 'config')",
+    "timestampExample": "2024-07-26 10:30:15 UTC",
+    "back": "Back to dashboard",
+    "errorDetails": "Error details",
+    "errorDescription": "An asynchronous operation failed to retrieve necessary configuration, leading to an attempt to access properties of an undefined object.",
+    "viewStack": "View stack trace",
+    "recurrenceTitle": "Recurrence history",
+    "recurrenceSubtitle": "Occurrences over the last 7 days",
+    "actions": "Actions",
+    "markResolved": "Mark as resolved",
+    "ignore": "Ignore error",
+    "share": "Share error",
+    "tags": "Tags",
+    "severityHigh": "High",
+    "severityMedium": "Medium",
+    "severityLow": "Low",
+    "relatedLogs": "Related logs",
+    "relatedLogsSubtitle": "Other events with this message",
+    "badgeHigh": "High",
+    "badgeWarning": "Warning",
+    "badgeInfo": "Info",
+    "serviceLabel": "Service:",
+    "loading": "Loading…",
+    "loadingChart": "Loading chart…",
+    "noRecurrence": "No recurrence data available.",
+    "notFound": "Log not found",
+    "unexpectedError": "Unexpected error",
+    "statusLabel": "Status",
+    "marking": "Marking…",
+    "ignoring": "Ignoring…",
+    "noRelated": "No related logs found."
+  },
+  "Stats": {
+    "uptime": "Uptime",
+    "last24h": "Last 24 hours",
+    "mtbf": "Mean Time Between Failures (MTBF)",
+    "minutes": "minutes",
+    "basedOnErrors": "Based on error logs",
+    "totalErrors": "Total Errors",
+    "errorRate": "Error Rate",
+    "warningRate": "Warning Rate",
+    "logVolumeTitle": "Log Volume – Last 7 Days",
+    "accessDenied": "Access Denied",
+    "needLogin": "You need to be logged in to view these statistics.",
+    "goToLogin": "Go to Login",
+    "errorPrefix": "Error:",
+    "unknownError": "An unknown error occurred"
+  },
+  "Latency": {
+    "title": "Request Latency",
+    "noDataTitle": "No Latency Data",
+    "noDataDesc": "No latency data has been received for this project in the last 24 hours.",
+    "chartTitle": "Average Latency per Endpoint (ms, last 24h)",
+    "tableTitle": "Recent Latency Checks",
+    "colTimestamp": "Timestamp",
+    "colEndpoint": "Endpoint",
+    "colStatus": "Status",
+    "colLatency": "Latency (ms)"
+  },
+  "Settings": {
+    "notifyTitle": "Notification preferences",
+    "notifySubtitle": "Email where you'll receive BugRadar alerts.",
+    "currentEmail": "Current email",
+    "changeNotifyEmail": "Change notification email",
+    "newEmailPlaceholder": "Enter the new email",
+    "save": "Save",
+    "loading": "Loading...",
+    "savedNotifyEmail": "Notification email saved.",
+    "saveError": "Could not save:",
+    "unknownError": "Unknown error",
+    "noSession": "No active session.",
+    "noEmailAvailable": "No email available.",
+    "resetError": "Could not send the reset link:",
+    "resetSent": "We've sent you an email to reset your password.",
+    "securityTitle": "Security & profile",
+    "securitySubtitle": "Change your avatar and reset your password any time.",
+    "sendResetLink": "Send password reset link"
   }
+
+
+
+
+
+
 }

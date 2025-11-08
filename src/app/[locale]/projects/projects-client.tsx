@@ -1,4 +1,5 @@
 "use client";
+
 import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -11,34 +12,35 @@ import {
   AlertTriangle,
   Copy,
   Check,
-  Trash2, // 1. Importar el icono de basura
+  Trash2,
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 
 interface Project {
   id: string;
   name: string;
 }
 
-export default function ProjectsPage() {
+export default function ProjectsClient() {
+  const locale = useLocale();
+  const t = useTranslations("Projects");
+  const router = useRouter();
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState("");
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
-  const [deletingId, setDeletingId] = useState<string | null>(null); // 2. Estado para el spinner de borrado
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [newProjectKey, setNewProjectKey] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-
-  const router = useRouter();
 
   // Cargar proyectos al iniciar
   useEffect(() => {
     fetch("/api/projects")
       .then((res) => {
         if (!res.ok) {
-          throw new Error(
-            "No se pudieron cargar los proyectos. ¿Has iniciado sesión?"
-          );
+          throw new Error(t("loadErrorAuth"));
         }
         return res.json();
       })
@@ -53,7 +55,7 @@ export default function ProjectsPage() {
       .finally(() => {
         setIsLoading(false);
       });
-  }, []);
+  }, [t]);
 
   // Crear un nuevo proyecto
   const handleCreateProject = async (e: FormEvent) => {
@@ -63,7 +65,7 @@ export default function ProjectsPage() {
     setIsCreating(true);
     setNewProjectKey(null);
     setCopied(false);
-    setError(null); // Limpiar errores
+    setError(null);
 
     const res = await fetch("/api/projects", {
       method: "POST",
@@ -73,12 +75,12 @@ export default function ProjectsPage() {
 
     if (res.ok) {
       const newProject = await res.json();
-      setProjects([newProject, ...projects]);
+      setProjects((prev) => [newProject, ...prev]);
       setNewProjectKey(newProject.apiKey);
       setNewProjectName("");
     } else {
       const errData = await res.json();
-      setError(`Error al crear: ${errData.error || res.statusText}`);
+      setError(t("createError", { message: errData.error || "" }).trim());
     }
     setIsCreating(false);
   };
@@ -86,21 +88,18 @@ export default function ProjectsPage() {
   // Seleccionar un proyecto e ir al Dashboard
   const selectProject = (projectId: string) => {
     localStorage.setItem("selectedProjectId", projectId);
-    router.push("/dashboard");
+    router.push(`/${locale}/dashboard`);
   };
 
-  // 3. Función para Borrar un proyecto
+  // Borrar proyecto
   const handleDeleteProject = async (projectId: string, projectName: string) => {
-    // Usamos prompt para una confirmación segura (ya que no podemos usar alert/confirm)
     const confirmation = prompt(
-      `Esto borrará permanentemente el proyecto y TODOS sus logs.\n\nPara confirmar, escribe el nombre del proyecto: "${projectName}"`
+      t("deleteConfirmPrompt", { projectName })
     );
 
     if (confirmation !== projectName) {
-      setError(
-        "El nombre no coincide. El proyecto NO se ha borrado."
-      );
-      setTimeout(() => setError(null), 3000); // Limpiar error
+      setError(t("deleteNameMismatch"));
+      setTimeout(() => setError(null), 3000);
       return;
     }
 
@@ -114,15 +113,12 @@ export default function ProjectsPage() {
 
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.error || "No se pudo borrar el proyecto");
+        throw new Error(errData.error || t("deleteError"));
       }
 
-      // Quitar el proyecto de la lista en el frontend
-      setProjects((currentProjects) =>
-        currentProjects.filter((p) => p.id !== projectId)
-      );
+      setProjects((current) => current.filter((p) => p.id !== projectId));
     } catch (err: any) {
-      setError(`Error al borrar: ${err.message}`);
+      setError(t("deleteErrorWithMsg", { message: err.message }));
     } finally {
       setDeletingId(null);
     }
@@ -137,12 +133,10 @@ export default function ProjectsPage() {
     }
   };
 
-  // --- Sub-componentes de Renderizado ---
-
   const renderLoading = () => (
     <div className="flex flex-col items-center justify-center min-h-[50vh]">
       <Loader2 className="w-12 h-12 animate-spin text-skin-subtitle" />
-      <p className="mt-4 text-skin-subtitle">Cargando tus proyectos...</p>
+      <p className="mt-4 text-skin-subtitle">{t("loadingProjects")}</p>
     </div>
   );
 
@@ -151,7 +145,7 @@ export default function ProjectsPage() {
 
     return (
       <>
-        {/* Bloque de Error (si existe) */}
+        {/* Error */}
         {error && (
           <div className="mb-4 bg-destructive/10 border border-destructive/50 text-destructive p-3 rounded-md flex items-center gap-3">
             <AlertTriangle className="w-5 h-5 flex-shrink-0" />
@@ -159,13 +153,11 @@ export default function ProjectsPage() {
           </div>
         )}
 
-        {/* Bloque de Éxito al Crear (si existe) */}
+        {/* Éxito al crear */}
         {newProjectKey && (
           <div className="mb-8 bg-emerald-100 border-l-4 border-emerald-500 text-emerald-900 p-4 rounded-md shadow-lg">
-            <h3 className="font-bold text-lg">¡Proyecto Creado con Éxito!</h3>
-            <p className="text-sm mt-1">
-              Guarda esta API Key. La necesitarás para configurar tu agente.
-            </p>
+            <h3 className="font-bold text-lg">{t("createSuccessTitle")}</h3>
+            <p className="text-sm mt-1">{t("createSuccessDesc")}</p>
             <div className="mt-4 flex bg-emerald-50 p-2 rounded border border-emerald-200">
               <input
                 type="text"
@@ -179,20 +171,16 @@ export default function ProjectsPage() {
                 onClick={handleCopyKey}
                 className="text-emerald-700 hover:text-emerald-900"
               >
-                {copied ? (
-                  <Check className="w-4 h-4" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
+                {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
               </Button>
             </div>
           </div>
         )}
 
-        {/* Lista de Proyectos */}
+        {/* Lista de proyectos */}
         <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
           <h2 className="text-xl font-semibold text-skin-title mb-4">
-            Selecciona un Proyecto
+            {t("selectProject")}
           </h2>
           <div className="space-y-3">
             {projects.length > 0 ? (
@@ -204,7 +192,7 @@ export default function ProjectsPage() {
                   <button
                     className="flex-1 text-left text-skin-title hover:underline font-medium"
                     onClick={() => selectProject(project.id)}
-                    disabled={!!deletingId} // Desactivar si se está borrando algo
+                    disabled={!!deletingId}
                   >
                     {project.name}
                   </button>
@@ -214,7 +202,7 @@ export default function ProjectsPage() {
                     onClick={() =>
                       handleDeleteProject(project.id, project.name)
                     }
-                    disabled={!!deletingId} // Desactivar todos los botones de borrado
+                    disabled={!!deletingId}
                     className="text-destructive hover:text-destructive/80"
                   >
                     {deletingId === project.id ? (
@@ -227,20 +215,20 @@ export default function ProjectsPage() {
               ))
             ) : (
               <p className="text-center text-skin-subtitle py-4">
-                No tienes ningún proyecto todavía. ¡Crea uno!
+                {t("noProjects")}
               </p>
             )}
           </div>
         </div>
 
-        {/* Formulario de Creación */}
+        {/* Formulario de creación */}
         <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6 mt-8">
           <h2 className="text-xl font-semibold text-skin-title mb-4">
-            O crea uno nuevo
+            {t("createNewTitle")}
           </h2>
           <form onSubmit={handleCreateProject} className="space-y-4">
             <Input
-              placeholder="Nombre de tu nueva app..."
+              placeholder={t("createPlaceholder")}
               value={newProjectName}
               onChange={(e) => setNewProjectName(e.target.value)}
               className="bg-skin-input border-border focus:ring-[var(--ring)]"
@@ -255,7 +243,7 @@ export default function ProjectsPage() {
               ) : (
                 <Plus className="w-4 h-4 mr-2" />
               )}
-              {isCreating ? "Creando..." : "Crear Proyecto"}
+              {isCreating ? t("creating") : t("createButton")}
             </Button>
           </form>
         </div>
@@ -266,9 +254,7 @@ export default function ProjectsPage() {
   return (
     <div className="min-h-screen w-full bg-skin-bg text-skin-title">
       <Navbar />
-      <main className="max-w-xl mx-auto px-4 py-10">
-        {renderContent()}
-      </main>
+      <main className="max-w-xl mx-auto px-4 py-10">{renderContent()}</main>
       <Footer />
     </div>
   );

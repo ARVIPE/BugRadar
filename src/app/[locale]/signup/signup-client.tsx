@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { AlertCircle } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export default function SignupClient() {
-  const locale = useLocale(); // 👈 ya no lo pasamos por props
+  const locale = useLocale();
+  const t = useTranslations("Signup"); // 👈 nuevo namespace
   const router = useRouter();
 
   const [email, setEmail] = useState("");
@@ -38,7 +39,7 @@ export default function SignupClient() {
     setError(null);
 
     if (password !== confirmPassword) {
-      setError("Las contraseñas no coinciden 🐞");
+      setError(t("errorMismatch"));
       return;
     }
 
@@ -59,8 +60,7 @@ export default function SignupClient() {
         throw new Error(data.error || "Algo salió mal.");
       }
 
-      // éxito
-      // redirige al login del mismo idioma
+      // éxito → vuelve al login del mismo idioma
       router.push(`/${locale}`);
     } catch (err: any) {
       setError(err.message);
@@ -86,11 +86,9 @@ export default function SignupClient() {
               className="rounded-full"
             />
             <h1 className="text-2xl font-bold mt-4 text-skin-title">
-              Crea tu cuenta en BugRadar
+              {t("title")}
             </h1>
-            <p className="text-sm text-skin-subtitle">
-              Monitoriza tus apps. Atrapa bugs a tiempo. Duerme mejor.
-            </p>
+            <p className="text-sm text-skin-subtitle">{t("subtitle")}</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSignup}>
@@ -99,12 +97,12 @@ export default function SignupClient() {
                 htmlFor="email"
                 className="block text-sm font-medium text-skin-subtitle"
               >
-                Email
+                {t("email")}
               </label>
               <Input
                 id="email"
                 type="email"
-                placeholder="tu@email.com"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="mt-1 w-full bg-skin-input text-skin-title border border-gray-600 focus:border-yellow-500 focus:ring-yellow-500"
@@ -116,7 +114,7 @@ export default function SignupClient() {
                 htmlFor="password"
                 className="block text-sm font-medium text-skin-subtitle"
               >
-                Contraseña
+                {t("password")}
               </label>
               <Input
                 id="password"
@@ -133,7 +131,7 @@ export default function SignupClient() {
                 htmlFor="confirmPassword"
                 className="block text-sm font-medium text-skin-subtitle"
               >
-                Confirmar contraseña
+                {t("confirmPassword")}
               </label>
               <Input
                 id="confirmPassword"
@@ -157,22 +155,22 @@ export default function SignupClient() {
               disabled={isLoading}
               className="w-full mt-4 bg-yellow-400 hover:bg-yellow-500 text-black font-semibold transition-colors duration-300 disabled:bg-yellow-400/50 disabled:cursor-not-allowed"
             >
-              {isLoading ? "Registrando..." : "Registrarse"}
+              {isLoading ? t("submitting") : t("submit")}
             </Button>
 
             <p className="mt-4 text-sm text-skin-subtitle text-center">
-              ¿Ya tienes una cuenta?{" "}
+              {t("haveAccount")}{" "}
               <a
                 href={`/${locale}`}
                 className="text-yellow-400 hover:underline"
               >
-                Inicia sesión
+                {t("goLogin")}
               </a>
             </p>
           </form>
 
           <p className="mt-8 text-xs text-skin-subtitle text-center italic">
-            "Los bugs no se registran solos. Todavía. 🐛"
+            {t("quote")}
           </p>
         </div>
       </div>

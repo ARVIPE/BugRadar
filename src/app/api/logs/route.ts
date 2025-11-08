@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { Resend } from "resend";
-import { getNotifyEmailFor } from "@/app/settings/actions";
+import { getNotifyEmailFor } from "@/app/[locale]/settings/actions";
 import { createHash } from "crypto";
 
 const resend = new Resend(process.env.RESEND_API_KEY);

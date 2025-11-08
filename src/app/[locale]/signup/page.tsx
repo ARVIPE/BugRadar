@@ -6,7 +6,6 @@ export default async function Page({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  // Next quiere que esperes los params en rutas dinámicas
   await params;
   return <SignupClient />;
 }

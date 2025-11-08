@@ -1,4 +1,5 @@
 "use client";
+
 import {
   MessageSquare,
   AlertCircle,
@@ -9,6 +10,7 @@ import {
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useLocale, useTranslations } from "next-intl";
 
 type Activity = {
   id: string;
@@ -24,7 +26,7 @@ interface RecentActivityProps {
   projectId: string | null;
 }
 
-// Comparamos arrays de actividades para no re-renderizar si son iguales
+// comparación para no rerenderizar si no cambió
 function sameActivities(a: Activity[], b: Activity[]) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -45,7 +47,8 @@ function sameActivities(a: Activity[], b: Activity[]) {
   return true;
 }
 
-function formatTimeAgo(dateString: string) {
+// función de "hace X" con soporte de locale
+function formatTimeAgo(dateString: string, locale: string, t: (k: string, v?: any) => string) {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -53,15 +56,17 @@ function formatTimeAgo(dateString: string) {
   const hours = Math.round(minutes / 60);
   const days = Math.round(hours / 24);
 
-  if (seconds < 60) return `${seconds}s ago`;
-  if (minutes < 60) return `${minutes}m ago`;
-  if (hours < 24) return `${hours}h ago`;
-  return `${days}d ago`;
+  if (seconds < 60) return t("time.seconds", { value: seconds });
+  if (minutes < 60) return t("time.minutes", { value: minutes });
+  if (hours < 24) return t("time.hours", { value: hours });
+  return t("time.days", { value: days });
 }
 
 export default function RecentActivity({ projectId }: RecentActivityProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const locale = useLocale();
+  const t = useTranslations("RecentActivity");
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +78,6 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
         return;
       }
 
-      // solo en la primera
       if (isFirstLoad && !cancelled) {
         setIsLoading(true);
       }
@@ -89,7 +93,6 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
 
         if (!cancelled) {
           setActivities((prev) => {
-            // 👇 no actualices si es igual
             if (sameActivities(prev, data)) return prev;
             return data;
           });
@@ -114,9 +117,11 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
   const renderActivityIcon = (activity: Activity) => {
     switch (activity.type) {
       case "new_event":
-        return activity.severity === "error"
-          ? <AlertCircle className="w-4 h-4 text-destructive" />
-          : <AlertTriangle className="w-4 h-4 text-warning" />;
+        return activity.severity === "error" ? (
+          <AlertCircle className="w-4 h-4 text-destructive" />
+        ) : (
+          <AlertTriangle className="w-4 h-4 text-warning" />
+        );
       case "resolved_event":
         return <CheckCircle className="w-4 h-4 text-success" />;
       case "ignored_event":
@@ -128,60 +133,58 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
 
   const renderActivityContent = (activity: Activity) => {
     const shortId = activity.id.split("-")[0].toUpperCase();
+    const link = (
+      <Link
+        href={`/${locale}/detail/${activity.id}`}
+        className="ml-1 text-blue-500 hover:underline"
+      >
+        (#{shortId})
+      </Link>
+    );
 
     switch (activity.type) {
       case "new_event":
         return (
           <>
-            Nuevo {activity.severity === "error" ? "error" : "warning"} en{" "}
-            <span className="text-skin-title">{activity.container_name}</span>.
-            <Link
-              href={`/detail/${activity.id}`}
-              className="ml-1 text-blue-500 hover:underline"
-            >
-              (#{shortId})
-            </Link>
+            {t("newEvent", {
+              severity:
+                activity.severity === "error"
+                  ? t("severity.error")
+                  : t("severity.warning"),
+              container: activity.container_name ?? t("unknownContainer"),
+            })}{" "}
+            {link}
           </>
         );
       case "resolved_event":
         return (
           <>
-            Evento{" "}
-            <Link
-              href={`/detail/${activity.id}`}
-              className="text-blue-500 hover:underline"
-            >
-              (#{shortId})
-            </Link>{" "}
-            en <span className="text-skin-title">{activity.container_name}</span>{" "}
-            marcado como resuelto por{" "}
-            <span className="font-semibold">{activity.user_email}</span>.
+            {t("resolvedEvent", {
+              container: activity.container_name ?? t("unknownContainer"),
+              user: activity.user_email ?? t("unknownUser"),
+            })}{" "}
+            {link}
           </>
         );
       case "ignored_event":
         return (
           <>
-            Evento{" "}
-            <Link
-              href={`/detail/${activity.id}`}
-              className="text-blue-500 hover:underline"
-            >
-              (#{shortId})
-            </Link>{" "}
-            en <span className="text-skin-title">{activity.container_name}</span>{" "}
-            marcado como ignorado por{" "}
-            <span className="font-semibold">{activity.user_email}</span>.
+            {t("ignoredEvent", {
+              container: activity.container_name ?? t("unknownContainer"),
+              user: activity.user_email ?? t("unknownUser"),
+            })}{" "}
+            {link}
           </>
         );
       default:
-        return "Actividad desconocida.";
+        return t("unknownActivity");
     }
   };
 
   return (
     <div className="mt-10 bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
       <h3 className="text-skin-title font-semibold text-sm mb-4">
-        Recent Activity
+        {t("title")}
       </h3>
 
       {isLoading ? (
@@ -190,9 +193,7 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
         </div>
       ) : activities.length === 0 ? (
         <div className="flex justify-center items-center h-24">
-          <span className="text-sm text-skin-subtitle">
-            No hay actividad reciente.
-          </span>
+          <span className="text-sm text-skin-subtitle">{t("empty")}</span>
         </div>
       ) : (
         <div className="space-y-4">
@@ -205,7 +206,7 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
               <div className="text-sm text-skin-subtitle">
                 <div>{renderActivityContent(activity)}</div>
                 <div className="text-xs text-skin-subtitle opacity-75 mt-1">
-                  {formatTimeAgo(activity.timestamp)}
+                  {formatTimeAgo(activity.timestamp, locale, t)}
                 </div>
               </div>
             </div>
