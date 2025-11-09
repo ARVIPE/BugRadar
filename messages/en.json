@@ -56,7 +56,9 @@
     "deleteConfirmPrompt": "This will permanently delete the project and ALL its logs.\n\nTo confirm, type the project name: \"{projectName}\"",
     "deleteNameMismatch": "The name does not match. The project was NOT deleted.",
     "deleteError": "Could not delete the project",
-    "deleteErrorWithMsg": "Error deleting project: {message}"
+    "deleteErrorWithMsg": "Error deleting project: {message}",
+    "installAgentTitle": "Install the Docker agent",
+    "installAgentDesc": "Run this command on the server where your containers are running:"
   },
   "LogStream": {
     "title": "Log Stream",

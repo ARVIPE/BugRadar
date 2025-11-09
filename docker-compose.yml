@@ -1,31 +1,34 @@
+
 services:
   noisy-app:
     build:
       context: ./noisy-app
-    container_name: bugradar-noisy
-    environment:
-      APP_NAME: "noisy-app"
+    container_name: noisy-app
     ports:
       - "5000:5000"
     labels:
       - bugradar=true
-
-  agent:
-    build:
-      context: ./agent
-    container_name: bugradar-agent
     environment:
-      BUGRADAR_API_KEY: "proj_bb6047d9345541a7b9f2a6056c41d284"
+      APP_NAME: "noisy-app"
+
+  bugradar-agent:
+    image: bugradar/agent:latest
+    container_name: bugradar-agent
+    restart: always
+    environment:
+      BUGRADAR_API_KEY: "proj_fe0c20f740bd45fd88e709b881609229"
       BUGRADAR_API_URL: "http://host.docker.internal:3000/api/logs"
-      BUGRADAR_UPTIME_API_URL: "http://host.docker.internal:3000/api/uptime"
       BUGRADAR_LATENCY_API_URL: "http://host.docker.internal:3000/api/latency"
-      BUGRADAR_UPTIME_TARGET_URL: "http://bugradar-noisy:5000/health"
-      BUGRADAR_LATENCY_TARGET_URL: "http://bugradar-noisy:5000"
-      BUGRADAR_CONTAINERS: "bugradar-noisy" 
-      BUGRADAR_TAIL: "50"
+      BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"
+      BUGRADAR_CONTAINERS: "noisy-app"
+      BUGRADAR_TAIL: "100"
       BUGRADAR_PARSE_JSON: "1"
       PYTHONUNBUFFERED: "1"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - noisy-app
+    networks:
+      - bugradar-net
+
+networks:
+  bugradar-net:
+    driver: bridge

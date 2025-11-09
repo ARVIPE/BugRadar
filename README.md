@@ -1,20 +1,20 @@
 # 🐞 BugRadar
 
-**BugRadar** es un sistema de monitorización *self-hosted* que rastrea y analiza en tiempo real los logs de contenedores **Docker**.  
-Está compuesto por dos partes principales:
+**BugRadar** is a self-hosted monitoring system that tracks and analyzes **Docker** container logs in real-time.
+It is composed of two main parts:
 
-1. **Agente** (Python) → Lee y analiza logs desde Docker, detecta errores/anomalías y envía los datos.
-2. **Dashboard** (Next.js) → Interfaz web moderna para visualizar logs, métricas y estado del sistema.
+1.  **Agent** (Python) → Reads and analyzes logs from Docker, detects errors/anomalies, and sends the data.
+2.  **Dashboard** (Next.js) → Modern web interface for visualizing logs, metrics, and system status.
 
 ---
 
-## 📌 Características
+## 📌 Features
 
-- 📡 **Monitoreo en tiempo real** de contenedores Docker.
-- ⚠️ **Detección automática** de errores y anomalías.
-- 📧 **Alertas instantáneas** vía correo electrónico.
-- 📊 **Panel web moderno** con métricas y logs filtrables.
-- 🔒 **Self-hosted** → tus datos siempre bajo control.
-- ⚙️ **Integración sencilla** en entornos Docker ya existentes.
+- 📡 **Real-time monitoring** of Docker containers.
+- ⚠️ **Automatic detection** of errors and anomalies.
+- 📧 **Instant alerts** via email.
+- 📊 **Modern web panel** with filterable logs and metrics.
+- 🔒 **Self-hosted** → your data always under control.
+- ⚙️ **Easy integration** into existing Docker environments.
 
 ---

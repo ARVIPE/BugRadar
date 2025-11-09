@@ -56,7 +56,9 @@
     "deleteConfirmPrompt": "Esto borrará permanentemente el proyecto y TODOS sus logs.\n\nPara confirmar, escribe el nombre del proyecto: \"{projectName}\"",
     "deleteNameMismatch": "El nombre no coincide. El proyecto NO se ha borrado.",
     "deleteError": "No se pudo borrar el proyecto",
-    "deleteErrorWithMsg": "Error al borrar: {message}"
+    "deleteErrorWithMsg": "Error al borrar: {message}",
+    "installAgentTitle": "Instala el agente Docker",
+    "installAgentDesc": "Ejecuta este comando en el servidor donde corren tus contenedores:"
   },
   "LogStream": {
     "title": "Flujo de logs",
