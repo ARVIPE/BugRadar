@@ -106,6 +106,20 @@ export default function DetailPage({ id }: { id: string }) {
     };
   }, [id]);
 
+  const handleShare = async () => {
+    if (!event) return;
+
+    const shareUrl = `${window.location.origin}/${locale}/detail/${event.id}`;
+
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      alert(t("shareCopied") ?? "Link copied to clipboard");
+    } catch {
+      prompt(t("copyManually") ?? "Copy this link:", shareUrl);
+    }
+  };
+
+
   const title = useMemo(() => {
     if (!event) return t("notFound");
     try {
@@ -282,7 +296,7 @@ export default function DetailPage({ id }: { id: string }) {
                 >
                   {saving === "ignore" ? t("ignoring") : t("ignore")}
                 </Button>
-                <Button variant="ghost" className="w-full">
+                <Button variant="ghost" className="w-full" onClick={handleShare}>
                   <Share2 size={16} className="mr-2" /> {t("share")}
                 </Button>
 
