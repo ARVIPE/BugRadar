@@ -64,9 +64,9 @@ export async function GET(req: Request) {
         .eq('project_id', projectId).eq('severity', 'warning').gte('created_at', twentyFourHoursAgo),
       // Uptime (24h)
       db.from('latency').select('status_code')
-        .eq('project_id', projectId).eq('endpoint', '/health').gte('created_at', twentyFourHoursAgo),
+        .eq('project_id', projectId).gte('created_at', twentyFourHoursAgo),
       // Total Requests (para Error Rate)
-      db.from('latency').select('id', { count: 'exact', head: true })
+      db.from('events').select('id', { count: 'exact', head: true })
         .eq('project_id', projectId).gte('created_at', twentyFourHoursAgo),
       // Log Volume (7 dias) - (Usando RPC)
       db.rpc('get_project_log_volume', { project_id_param: projectId }),
@@ -74,9 +74,6 @@ export async function GET(req: Request) {
       db.rpc('get_project_mtbf', { project_id_param: projectId })
     ]);
 
-    // 5. Procesar los resultados
-    
-    // --- CORRECCIÓN AQUÍ ---
     
     const totalErrors = errorsCount.count ?? 0;
     const totalWarnings = warningsCount.count ?? 0;
