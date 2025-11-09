@@ -43,7 +43,7 @@ export default function LogStream({ projectId }: LogStreamProps) {
   const t = useTranslations("LogStream");
 
   const [activeTab, setActiveTab] = useState<
-    "errors" | "warnings" | "closed" | "metrics"
+    "errors" | "warnings" | "closed"
   >("errors");
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<Ev[]>([]);
@@ -134,7 +134,6 @@ export default function LogStream({ projectId }: LogStreamProps) {
       label: `${t("tabWarnings")} (${counts.wOpen})`,
     },
     { key: "closed" as const, label: `${t("tabClosed")} (${counts.closed})` },
-    { key: "metrics" as const, label: t("tabMetrics") },
   ];
 
   const filtered = useMemo(() => {
@@ -151,10 +150,7 @@ export default function LogStream({ projectId }: LogStreamProps) {
       base = base.filter((e) => e.severity === "warning" && isOpen(e));
     } else if (activeTab === "closed") {
       base = base.filter(isClosed);
-    } else if (activeTab === "metrics") {
-      // aquí podrías filtrar distinto cuando tengas datos de métricas
-      base = [];
-    }
+    } 
 
     if (q) {
       base = base.filter((x) => {
