@@ -11,10 +11,6 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-// --- Funciones RPC que necesitamos (ya creadas) ---
-// 1. get_project_log_volume(project_id_param uuid)
-// 2. get_project_mtbf(project_id_param uuid)
-
 export async function GET(req: Request) {
   // 1. Autenticación
   const session = await getServerSession(authConfig);
@@ -54,7 +50,8 @@ export async function GET(req: Request) {
       uptimePings,
       totalRequests,
       logVolumeData,
-      mtbfData
+      mtbfData,
+      p95Data,
     ] = await Promise.all([
       // Total Errors (24h)
       db.from('events').select('id', { count: 'exact', head: true })
@@ -71,7 +68,9 @@ export async function GET(req: Request) {
       // Log Volume (7 dias) - (Usando RPC)
       db.rpc('get_project_log_volume', { project_id_param: projectId }),
       // MTBF (30 dias) - (Usando RPC)
-      db.rpc('get_project_mtbf', { project_id_param: projectId })
+      db.rpc('get_project_mtbf', { project_id_param: projectId }),
+      // P95 Latency (24 horas) - (Usando RPC)
+      db.rpc('get_project_latency_p95', { project_id_param: projectId, from_ts: twentyFourHoursAgo }),
     ]);
 
     
@@ -95,9 +94,10 @@ export async function GET(req: Request) {
     const mtbf = (mtbfData.data !== null && mtbfData.data !== undefined) ? parseFloat(mtbfData.data.toFixed(2)) : 0;
 
     // Log Volume (de la RPC)
-    const logVolume = logVolumeData.data || [];
+    const logVolume = logVolumeData.data || []
 
-    // --- FIN DE LA CORRECCIÓN ---
+    // P95 Latency (de la RPC)
+   const p95 = p95Data.data !== null ? Math.round(Number(p95Data.data)) : null;
 
     return NextResponse.json({
       totalErrors,
@@ -107,6 +107,7 @@ export async function GET(req: Request) {
       errorRate: errorRate.toString(), // El frontend espera string
       warningRate: warningRate.toString(), // El frontend espera string
       logVolume,
+      p95LatencyMs: p95,
     });
 
   } catch (error: unknown) {

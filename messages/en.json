@@ -138,6 +138,7 @@
     "uptime": "Uptime",
     "last24h": "Last 24 hours",
     "mtbf": "Mean Time Between Failures (MTBF)",
+    "p95Latency": "P95 Latency (ms)",
     "minutes": "minutes",
     "basedOnErrors": "Based on error logs",
     "totalErrors": "Total Errors",

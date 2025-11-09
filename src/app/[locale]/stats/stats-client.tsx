@@ -4,12 +4,7 @@ import { useState, useEffect } from "react";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import { useSession } from "next-auth/react";
-import {
-  ShieldCheck,
-  AlertTriangle,
-  TrendingUp,
-  Loader2,
-} from "lucide-react";
+import { ShieldCheck, AlertTriangle, TrendingUp, Loader2 } from "lucide-react";
 import {
   ResponsiveContainer,
   BarChart,
@@ -31,6 +26,7 @@ const initialStats = {
   errorRate: "0.00",
   warningRate: "0.00",
   logVolume: [],
+  p95LatencyMs: null,
 };
 
 export default function StatsClient() {
@@ -116,17 +112,13 @@ export default function StatsClient() {
                   <p className="text-2xl font-bold mt-2 text-green-500">
                     {stats.uptime}%
                   </p>
-                  <p className="text-xs text-skin-subtitle">
-                    {t("last24h")}
-                  </p>
+                  <p className="text-xs text-skin-subtitle">{t("last24h")}</p>
                 </div>
 
                 {/* MTBF */}
                 <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm text-skin-subtitle">
-                      {t("mtbf")}
-                    </h2>
+                    <h2 className="text-sm text-skin-subtitle">{t("mtbf")}</h2>
                     <TrendingUp className="text-skin-subtitle" size={18} />
                   </div>
                   <p className="text-2xl font-bold mt-2 text-skin-title">
@@ -148,9 +140,7 @@ export default function StatsClient() {
                   <p className="text-2xl font-bold mt-2 text-red-500">
                     {stats.totalErrors}
                   </p>
-                  <p className="text-xs text-skin-subtitle">
-                    {t("last24h")}
-                  </p>
+                  <p className="text-xs text-skin-subtitle">{t("last24h")}</p>
                 </div>
 
                 {/* ERROR RATE */}
@@ -164,9 +154,7 @@ export default function StatsClient() {
                   <p className="text-2xl font-bold mt-2 text-red-500">
                     {stats.errorRate}%
                   </p>
-                  <p className="text-xs text-skin-subtitle">
-                    {t("last24h")}
-                  </p>
+                  <p className="text-xs text-skin-subtitle">{t("last24h")}</p>
                 </div>
 
                 {/* WARNING RATE */}
@@ -180,16 +168,24 @@ export default function StatsClient() {
                   <p className="text-2xl font-bold mt-2 text-yellow-500">
                     {stats.warningRate}%
                   </p>
-                  <p className="text-xs text-skin-subtitle">
-                    {t("last24h")}
+                  <p className="text-xs text-skin-subtitle">{t("last24h")}</p>
+                </div>
+
+                <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-sm text-skin-subtitle">{t("p95Latency")}</h2>
+                  </div>
+                  <p className="text-2xl font-bold mt-2 text-skin-title">
+                    {stats.p95LatencyMs !== null ? `${stats.p95LatencyMs} ms` : "—"}
                   </p>
+                  <p className="text-xs text-skin-subtitle">{t("last24h")}</p>
                 </div>
               </div>
 
               {/* Log Volume Chart */}
               <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
                 <h2 className="text-lg font-semibold mb-4 text-skin-title">
-                    {t("logVolumeTitle")}
+                  {t("logVolumeTitle")}
                 </h2>
                 <ResponsiveContainer width="100%" height={300}>
                   <BarChart data={stats.logVolume}>
