@@ -1,7 +1,7 @@
 // src/app/api/user/update-avatar/route.ts
 import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from "next-auth/next"
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"
+import { authConfig } from '@/lib/auth.config'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {

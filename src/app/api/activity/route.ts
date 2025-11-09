@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"; // Importa tu config de auth
+import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
 // Tu patrón de cliente admin (Service Role)
@@ -149,10 +149,10 @@ export async function GET(req: Request) {
     
     return NextResponse.json(finalActivities);
 
-  } catch (e: any) {
+  } catch (e: unknown) {
     console.error('Error fetching recent activity:', e);
     return new NextResponse(
-      JSON.stringify({ message: 'Error fetching recent activity', error: e.message }),
+      JSON.stringify({ message: 'Error fetching recent activity', error: (e as Error).message }),
       { status: 500 }
     );
   }

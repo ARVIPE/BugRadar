@@ -117,8 +117,8 @@ export default function ProjectsClient() {
       }
 
       setProjects((current) => current.filter((p) => p.id !== projectId));
-    } catch (err: any) {
-      setError(t("deleteErrorWithMsg", { message: err.message }));
+    } catch (err: unknown) {
+      setError(t("deleteErrorWithMsg", { message: (err as Error).message }));
     } finally {
       setDeletingId(null);
     }

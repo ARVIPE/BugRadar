@@ -7,7 +7,7 @@ import AlertAndChart from "@/components/alertandchart";
 import RecentActivity from "@/components/recentactivity";
 import { Bug, AlertTriangle, Activity } from "lucide-react";
 import { useMetrics } from "@/components/useMetrics";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 
 import { useSession } from "next-auth/react";
 import { useProject } from "@/hooks/useProject";
@@ -27,14 +27,7 @@ export default function DashboardClient() {
     }
   }, [status, router, locale]);
 
-  const { data, reload } = useMetrics(projectId, 5000);
-  const [refreshing, setRefreshing] = useState(false);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await reload();
-    setRefreshing(false);
-  };
+  const { data } = useMetrics(projectId, 5000);
 
   if (status === "loading" || !projectId) {
     return (

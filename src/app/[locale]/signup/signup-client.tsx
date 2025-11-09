@@ -62,8 +62,8 @@ export default function SignupClient() {
 
       // éxito → vuelve al login del mismo idioma
       router.push(`/${locale}`);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsLoading(false);
     }

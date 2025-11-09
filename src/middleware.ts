@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import createIntlMiddleware from "next-intl/middleware";
 
@@ -11,8 +11,8 @@ const intlMiddleware = createIntlMiddleware({
   defaultLocale,
 });
 
-// --- redirect raíz "/" → "/es" ---
-function baseRedirect(request: Request) {
+// redirect raíz "/" → "/es"
+function baseRedirect(request: NextRequest) {
   const url = new URL(request.url);
   if (url.pathname === "/") {
     return NextResponse.redirect(new URL(`/${defaultLocale}`, request.url));
@@ -20,21 +20,24 @@ function baseRedirect(request: Request) {
   return null;
 }
 
-// --- auth + i18n combinado ---
-const authMiddleware = withAuth(
+export default withAuth(
   function middleware(request) {
     const { pathname } = request.nextUrl;
 
-    // 1. no interceptar API
+    // 1. redirect raíz
+    const rootRedirect = baseRedirect(request);
+    if (rootRedirect) return rootRedirect;
+
+    // 2. no interceptar API
     if (pathname.startsWith("/api")) {
       return NextResponse.next();
     }
 
-    // 2. next-intl
+    // 3. i18n
     const intlResponse = intlMiddleware(request);
     if (intlResponse) return intlResponse;
 
-    // 3. auth
+    // 4. lógica extra de auth
     const token = request.nextauth.token;
 
     const segments = pathname.split("/");
@@ -44,6 +47,7 @@ const authMiddleware = withAuth(
         ? currentLocale
         : defaultLocale;
 
+    // si está logueado y está en /{locale} o /{locale}/signup → redirige a /{locale}/projects
     if (
       token &&
       (pathname === `/${locale}` || pathname === `/${locale}/signup`)
@@ -62,16 +66,6 @@ const authMiddleware = withAuth(
     },
   }
 );
-
-// --- export default ---
-// 👇 acepta los dos parámetros esperados por la firma tipada
-export default function middleware(request: any, event: any) {
-  const rootRedirect = baseRedirect(request);
-  if (rootRedirect) return rootRedirect;
-
-  // 👇 Pasamos ambos args
-  return authMiddleware(request, event);
-}
 
 export const config = {
   matcher: ["/((?!_next|.*\\..*|api).*)"],

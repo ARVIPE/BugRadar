@@ -179,7 +179,28 @@
     "securityTitle": "Security & profile",
     "securitySubtitle": "Change your avatar and reset your password any time.",
     "sendResetLink": "Send password reset link"
+  },
+  "ResetPassword": {
+    "title": "Reset password",
+    "subtitle": "Enter your new password. This link is single-use and will expire.",
+    "verifying": "Verifying link…",
+    "invalidLink": "Invalid or expired recovery link.",
+    "noTokens": "Session tokens were not found in the reset link.",
+    "validateError": "Could not validate the recovery link.",
+    "newPassword": "New password",
+    "repeatPassword": "Repeat password",
+    "passwordHint": "Minimum 8 characters. Add numbers and symbols for more security.",
+    "showPassword": "Show password",
+    "hidePassword": "Hide password",
+    "passwordMismatch": "Passwords do not match.",
+    "minLength": "Password must be at least 8 characters long.",
+    "updateButton": "Update password",
+    "saving": "Saving…",
+    "updateError": "Could not update the password.",
+    "success": "Password updated successfully ✅",
+    "successDesc": "You can now close this page and log in with your new password."
   }
+
 
 
 

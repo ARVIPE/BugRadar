@@ -55,8 +55,8 @@ export default function SettingsClient() {
       setNotificationEmail(next);
       setNewEmail("");
       alert(t("savedNotifyEmail"));
-    } catch (e: any) {
-      alert(t("saveError") + " " + (e?.message ?? t("unknownError")));
+    } catch (e: unknown) {
+      alert(t("saveError") + " " + ((e as Error)?.message ?? t("unknownError")));
     }
   };
 

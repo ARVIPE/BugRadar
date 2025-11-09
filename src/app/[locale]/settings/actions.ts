@@ -24,7 +24,7 @@ async function getAuthUserByEmail(email: string) {
 export async function getNotifyEmailFor(email: string) {
   const sbUser = await getAuthUserByEmail(email);
   if (!sbUser) return email;
-  const meta = (sbUser.user_metadata || {}) as Record<string, any>;
+  const meta = (sbUser.user_metadata || {}) as Record<string, unknown>;
   return (meta.notify_email as string) || email;
 }
 

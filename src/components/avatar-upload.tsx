@@ -69,8 +69,8 @@ export default function AvatarUpload() {
       // Esto provocará un re-renderizado del componente con la imagen actualizada.
       await updateSession()
 
-    } catch (error: any) {
-      alert(error.message)
+    } catch (error: unknown) {
+      alert((error as Error).message)
     } finally {
       setUploading(false)
     }

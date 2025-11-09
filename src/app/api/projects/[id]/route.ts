@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route";
+import { authConfig } from "@/lib/auth.config";
 import { createClient } from "@supabase/supabase-js";
 
 const supabaseAdmin = () =>

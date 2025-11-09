@@ -1,7 +1,7 @@
 // src/app/api/user/generate-upload-url/route.ts
 import { createClient } from '@supabase/supabase-js'
 import { getServerSession } from "next-auth/next"
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"
+import { authConfig } from '@/lib/auth.config'
 import { NextResponse } from 'next/server'
 
 export async function POST(request: Request) {
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ signedUrl: data.signedUrl, path: data.path })
 
-  } catch (error: any) {
-    console.error("Error crítico al generar la URL de subida:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (error: unknown) {
+    console.error("Error crítico al generar la URL de subida:", (error as Error).message);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }
 }

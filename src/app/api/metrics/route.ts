@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"; // Importa tu config de auth
+import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
 // Tu patrón de cliente admin
@@ -80,8 +80,8 @@ export async function GET(req: Request) {
       logsLastHour: logsLastHour ?? 0,
     });
 
-  } catch (error: any) {
-    console.error("Error fetching metrics:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error fetching metrics:", (error as Error).message);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

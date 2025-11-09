@@ -42,19 +42,24 @@ export default function LogStream({ projectId }: LogStreamProps) {
   const locale = useLocale();
   const t = useTranslations("LogStream");
 
-  const [activeTab, setActiveTab] = useState<"errors" | "warnings" | "closed" | "metrics">("errors");
+  const [activeTab, setActiveTab] = useState<
+    "errors" | "warnings" | "closed" | "metrics"
+  >("errors");
   const [query, setQuery] = useState("");
   const [events, setEvents] = useState<Ev[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let mounted = true;
-    let intervalId: any;
     let isFirstLoad = true;
+    let intervalId: ReturnType<typeof setInterval> | null = null;
 
     const load = async () => {
       if (!projectId) {
-        if (mounted) setLoading(false);
+        if (mounted) {
+          setEvents([]);
+          setLoading(false);
+        }
         return;
       }
 
@@ -63,12 +68,21 @@ export default function LogStream({ projectId }: LogStreamProps) {
       }
 
       try {
-        const res = await fetch(`/api/logs?project_id=${projectId}&limit=300`, {
-          cache: "no-store",
-        });
-        if (!mounted) return;
+        const res = await fetch(
+          `/api/logs?project_id=${encodeURIComponent(projectId)}&limit=300`,
+          {
+            cache: "no-store",
+          }
+        );
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
         const json = await res.json();
         const incoming: Ev[] = json.items ?? [];
+
+        if (!mounted) return;
 
         setEvents((prev) => {
           if (sameEvents(prev, incoming)) return prev;
@@ -86,12 +100,14 @@ export default function LogStream({ projectId }: LogStreamProps) {
       }
     };
 
-    load();
+    void load();
     intervalId = setInterval(load, 5000);
 
     return () => {
       mounted = false;
-      clearInterval(intervalId);
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
     };
   }, [projectId]);
 
@@ -113,7 +129,10 @@ export default function LogStream({ projectId }: LogStreamProps) {
 
   const tabs = [
     { key: "errors" as const, label: `${t("tabErrors")} (${counts.eOpen})` },
-    { key: "warnings" as const, label: `${t("tabWarnings")} (${counts.wOpen})` },
+    {
+      key: "warnings" as const,
+      label: `${t("tabWarnings")} (${counts.wOpen})`,
+    },
     { key: "closed" as const, label: `${t("tabClosed")} (${counts.closed})` },
     { key: "metrics" as const, label: t("tabMetrics") },
   ];
@@ -126,24 +145,32 @@ export default function LogStream({ projectId }: LogStreamProps) {
 
     let base = events;
 
-    if (activeTab === "errors")
+    if (activeTab === "errors") {
       base = base.filter((e) => e.severity === "error" && isOpen(e));
-    else if (activeTab === "warnings")
+    } else if (activeTab === "warnings") {
       base = base.filter((e) => e.severity === "warning" && isOpen(e));
-    else if (activeTab === "closed") base = base.filter(isClosed);
+    } else if (activeTab === "closed") {
+      base = base.filter(isClosed);
+    } else if (activeTab === "metrics") {
+      // aquí podrías filtrar distinto cuando tengas datos de métricas
+      base = [];
+    }
 
     if (q) {
-      base = base.filter(
-        (x) =>
+      base = base.filter((x) => {
+        const created = new Date(x.created_at);
+        const createdStr = isNaN(created.getTime())
+          ? ""
+          : created.toLocaleDateString(locale).toLowerCase();
+
+        return (
           x.log_message.toLowerCase().includes(q) ||
           x.container_name.toLowerCase().includes(q) ||
           x.severity.toLowerCase().includes(q) ||
           (x.status ?? "open").toLowerCase().includes(q) ||
-          new Date(x.created_at)
-            .toLocaleDateString(locale)
-            .toLowerCase()
-            .includes(q.toLowerCase())
-      );
+          createdStr.includes(q)
+        );
+      });
     }
     return base;
   }, [events, activeTab, query, locale]);
@@ -280,14 +307,14 @@ export default function LogStream({ projectId }: LogStreamProps) {
               </div>
               <div className="mb-2">
                 <span
-                  className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
-                    log.severity === t("severityError")
-                      ? "bg-destructive/10 text-destructive"
-                      : log.severity === t("severityWarning")
-                      ? "text-[var(--yellow)] bg-[color:var(--yellow)]/10"
-                      : "text-skin-subtitle bg-skin-bg"
-                  }`}
-                >
+                    className={`inline-block px-2 py-0.5 text-xs font-medium rounded-full ${
+                      log.severity === t("severityError")
+                        ? "bg-destructive/10 text-destructive"
+                        : log.severity === t("severityWarning")
+                        ? "text-[var(--yellow)] bg-[color:var(--yellow)]/10"
+                        : "text-skin-subtitle bg-skin-bg"
+                    }`}
+                  >
                   {log.severity}
                 </span>
               </div>

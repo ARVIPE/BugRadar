@@ -38,7 +38,7 @@ export default function StatsClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { data: session, status } = useSession();
+  const { status } = useSession();
   const { projectId } = useProject();
   const router = useRouter();
   const locale = useLocale();

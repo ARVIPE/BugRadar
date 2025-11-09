@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Moon, Sun, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useTranslations, useLocale } from "next-intl";
@@ -31,7 +31,7 @@ export default function LoginClient() {
       stored === "theme-light" || stored === "theme-dark" ? stored : theme;
     setTheme(initial);
     applyTheme(initial);
-  }, []);
+  }, [theme]);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -53,10 +53,6 @@ export default function LoginClient() {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
-
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === "theme-dark" ? "theme-light" : "theme-dark"));
-  };
 
   const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();

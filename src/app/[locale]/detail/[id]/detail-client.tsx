@@ -4,7 +4,7 @@ import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2 } from "lucide-react";
-import { useRouter, useParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
@@ -92,7 +92,7 @@ export default function DetailPage({ id }: { id: string }) {
           (x: EventItem) => x.id !== ev.id
         );
         setRelated(others.slice(0, 3));
-      } catch (e) {
+      } catch{
         setEvent(null);
         setChartLoading(false);
       } finally {
@@ -111,9 +111,7 @@ export default function DetailPage({ id }: { id: string }) {
     try {
       const parsed = JSON.parse(event.log_message);
       if (parsed.msg) return parsed.msg;
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
     return event.log_message.length > 150
       ? event.log_message.slice(0, 150) + "…"
       : event.log_message;
@@ -138,8 +136,8 @@ export default function DetailPage({ id }: { id: string }) {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed");
       setEvent(json.event);
-    } catch (e: any) {
-      setErrorMsg(e?.message || t("unexpectedError"));
+    } catch (e: unknown) {
+      setErrorMsg((e as Error)?.message || t("unexpectedError"));
     } finally {
       setSaving(null);
     }
@@ -193,7 +191,7 @@ export default function DetailPage({ id }: { id: string }) {
                       try {
                         const parsed = JSON.parse(event?.log_message ?? "{}");
                         return JSON.stringify(parsed, null, 2);
-                      } catch (e) {
+                      } catch {
                         return event?.log_message;
                       }
                     })()}

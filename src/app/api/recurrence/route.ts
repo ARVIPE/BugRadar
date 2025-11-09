@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route";
+import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
 // Tu patrón de cliente admin
@@ -78,7 +78,7 @@ export async function GET(req: Request) {
       } else {
         query = query.eq("log_message", logMessage);
       }
-    } catch (e) {
+    } catch {
       query = query.eq("log_message", logMessage);
     }
     // --- FIN DE LÓGICA DE FILTRO ---
@@ -121,8 +121,8 @@ export async function GET(req: Request) {
     // --- FIN DE LÓGICA MODIFICADA ---
 
     return NextResponse.json(chartData);
-  } catch (error: any) {
-    console.error("Error fetching recurrence stats:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error fetching recurrence stats:", (error as Error).message);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

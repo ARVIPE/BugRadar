@@ -16,7 +16,7 @@ type Activity = {
   id: string;
   timestamp: string;
   type: "new_event" | "resolved_event" | "ignored_event";
-  severity?: string;
+  severity?: "error" | "warning" | string;
   container_name?: string;
   log_message?: string;
   user_email?: string | null;
@@ -47,8 +47,11 @@ function sameActivities(a: Activity[], b: Activity[]) {
   return true;
 }
 
-// función de "hace X" con soporte de locale
-function formatTimeAgo(dateString: string, locale: string, t: (k: string, v?: any) => string) {
+// mismo tipo de parámetro que usa next-intl
+function formatTimeAgo(
+  dateString: string,
+  t: (key: string, values?: Record<string, string | number | Date>) => string
+) {
   const date = new Date(dateString);
   const now = new Date();
   const seconds = Math.round((now.getTime() - date.getTime()) / 1000);
@@ -74,7 +77,10 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
 
     const fetchActivities = async () => {
       if (!projectId) {
-        if (!cancelled) setIsLoading(false);
+        if (!cancelled) {
+          setActivities([]);
+          setIsLoading(false);
+        }
         return;
       }
 
@@ -83,9 +89,12 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
       }
 
       try {
-        const response = await fetch(`/api/activity?project_id=${projectId}`, {
-          cache: "no-store",
-        });
+        const response = await fetch(
+          `/api/activity?project_id=${encodeURIComponent(projectId)}`,
+          {
+            cache: "no-store",
+          }
+        );
         if (!response.ok) {
           throw new Error("Failed to fetch activities");
         }
@@ -98,7 +107,9 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
           });
         }
       } catch (error) {
-        console.error(error);
+        if (process.env.NODE_ENV !== "production") {
+          console.error(error);
+        }
       } finally {
         if (!cancelled && isFirstLoad) {
           setIsLoading(false);
@@ -107,7 +118,7 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
       }
     };
 
-    fetchActivities();
+    void fetchActivities();
 
     return () => {
       cancelled = true;
@@ -132,7 +143,7 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
   };
 
   const renderActivityContent = (activity: Activity) => {
-    const shortId = activity.id.split("-")[0].toUpperCase();
+    const shortId = activity.id.split("-")[0]?.toUpperCase?.() ?? activity.id;
     const link = (
       <Link
         href={`/${locale}/detail/${activity.id}`}
@@ -206,7 +217,7 @@ export default function RecentActivity({ projectId }: RecentActivityProps) {
               <div className="text-sm text-skin-subtitle">
                 <div>{renderActivityContent(activity)}</div>
                 <div className="text-xs text-skin-subtitle opacity-75 mt-1">
-                  {formatTimeAgo(activity.timestamp, locale, t)}
+                  {formatTimeAgo(activity.timestamp, t)}
                 </div>
               </div>
             </div>

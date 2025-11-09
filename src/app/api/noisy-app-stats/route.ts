@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route";
+import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
 // Tu patrón de cliente admin
@@ -112,8 +112,8 @@ export async function GET(req: Request) {
       logVolume,
     });
 
-  } catch (error: any) {
-    console.error("Error fetching noisy-app-stats:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    console.error("Error fetching noisy-app-stats:", (error as Error).message);
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

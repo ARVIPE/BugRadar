@@ -6,6 +6,6 @@ export default async function Page({
 }: {
   params: Promise<{ locale: string; id: string }>;
 }) {
-  const { locale, id } = await params;
+  const { id } = await params;
   return <DetailClient id={id} />;
 }

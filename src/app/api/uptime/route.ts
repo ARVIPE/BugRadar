@@ -45,8 +45,8 @@ export async function GET() {
 
     return NextResponse.json({ uptime });
 
-  } catch (e: any) {
-    console.error("Unexpected error in GET /api/uptime:", e);
+  } catch (e: unknown) {
+    console.error("Unexpected error in GET /api/uptime:", (e as Error).message);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
@@ -81,8 +81,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true }, { status: 201 });
 
-  } catch (e: any) {
-    console.error("Unexpected error in POST /api/uptime:", e);
+  } catch (e: unknown) {
+    console.error("Unexpected error in POST /api/uptime:", (e as Error).message);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

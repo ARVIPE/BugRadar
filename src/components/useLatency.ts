@@ -43,8 +43,8 @@ export const useLatency = (
       } else {
         console.warn("useLatency: API OK but json.items is not an array");
       }
-    } catch (e: any) {
-      console.warn("useLatency poll failed, retaining old data", e.message);
+    } catch (e: unknown) {
+      console.warn("useLatency poll failed, retaining old data", (e as Error).message);
       // No ponemos setData(null) para evitar el flasheo
     } finally {
       setLoading(false);

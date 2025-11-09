@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"; 
+import { authConfig } from "@/lib/auth.config";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { v4 as uuidv4 } from "uuid";
@@ -13,7 +13,7 @@ const supabaseAdmin = () =>
     { auth: { persistSession: false } }
   );
 
-export async function GET(req: Request) {
+export async function GET() {
   const session = await getServerSession(authConfig);
 
   if (!session || !session.user?.id) {

@@ -1,7 +1,6 @@
 // src/types/next-auth.d.ts
 
 import { type DefaultSession } from "next-auth";
-import { JWT } from "next-auth/jwt";
 
 // Extiende el módulo 'next-auth' para añadir propiedades a la sesión.
 declare module "next-auth" {

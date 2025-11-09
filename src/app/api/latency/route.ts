@@ -3,7 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createHash } from "crypto";
 import { getServerSession } from "next-auth/next"; // <-- AÑADIDO
-import { authConfig } from "@/app/api/auth/[...nextauth]/route"; // <-- AÑADIDO
+import { authConfig } from "@/lib/auth.config";
 
 // Tu patrón de cliente admin
 const supabase = () =>
@@ -125,8 +125,8 @@ export async function GET(req: Request) {
     // Devolvemos como 'items' (como espera useLatency)
     return NextResponse.json({ items: data });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error in GET /api/latency:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }

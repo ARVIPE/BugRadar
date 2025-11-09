@@ -25,7 +25,7 @@ const data = [
   { date: "Jul 26", value: 24 },
 ];
 
-export default function DetailClient({ id }: { id: string }) {
+export default function DetailClient({}: { id: string }) {
   const router = useRouter();
   const locale = useLocale();
   const t = useTranslations("Detail");

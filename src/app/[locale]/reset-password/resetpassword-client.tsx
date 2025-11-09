@@ -1,4 +1,3 @@
-// src/app/reset-password/page.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
@@ -7,6 +6,7 @@ import Footer from "@/components/footer";
 import { Button } from "@/components/ui/button";
 import { Eye, EyeOff } from "lucide-react";
 import { createClient } from "@supabase/supabase-js";
+import { useTranslations } from "next-intl";
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
@@ -15,7 +15,9 @@ const supabase = createClient(
 
 type Stage = "verifying" | "ready" | "saving" | "success" | "error";
 
-export default function ResetPasswordPage() {
+export default function ResetPasswordClient() {
+  const t = useTranslations("ResetPassword");
+
   const [stage, setStage] = useState<Stage>("verifying");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
@@ -30,15 +32,14 @@ export default function ResetPasswordPage() {
       try {
         setErrorMsg(null);
 
-        // 1) Modern attempt: ?code=...
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
 
+        // 1) Nuevo flujo: ?code=...
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
 
-          // Clean the URL
           url.searchParams.delete("code");
           window.history.replaceState({}, "", url.toString());
 
@@ -46,7 +47,7 @@ export default function ResetPasswordPage() {
           return;
         }
 
-        // 2) Legacy attempt: #access_token=...&refresh_token=...
+        // 2) Flujo legacy con hash
         const hash = window.location.hash.startsWith("#")
           ? window.location.hash.substring(1)
           : window.location.hash;
@@ -57,7 +58,7 @@ export default function ResetPasswordPage() {
           const refresh_token = params.get("refresh_token");
 
           if (!access_token || !refresh_token) {
-            throw new Error("No se encontraron tokens de sesión en el enlace.");
+            throw new Error(t("noTokens"));
           }
 
           const { error } = await supabase.auth.setSession({
@@ -66,27 +67,25 @@ export default function ResetPasswordPage() {
           });
           if (error) throw error;
 
-          // Clean the hash
           window.history.replaceState({}, "", window.location.pathname);
 
           setStage("ready");
           return;
         }
 
-        // If neither method worked, show error
-        throw new Error("Enlace de recuperación no válido o expirado.");
-      } catch (e: any) {
-        setErrorMsg(e?.message ?? "No se pudo validar el enlace de recuperación.");
+        // Si no hay nada válido
+        throw new Error(t("invalidLink"));
+      } catch (e: unknown) {
+        setErrorMsg((e as Error)?.message ?? t("validateError"));
         setStage("error");
       }
     })();
-  }, []);
+  }, [t]);
 
   const disabled = useMemo(() => {
     if (stage === "saving" || stage === "verifying") return true;
     if (!password || !password2) return true;
     if (password !== password2) return true;
-    // Minimal rules
     if (password.length < 8) return true;
     return false;
   }, [stage, password, password2]);
@@ -96,16 +95,15 @@ export default function ResetPasswordPage() {
       setStage("saving");
       setErrorMsg(null);
 
-      // Fast validations rules
-      if (password !== password2) throw new Error("Las contraseñas no coinciden.");
-      if (password.length < 8) throw new Error("La contraseña debe tener al menos 8 caracteres.");
+      if (password !== password2) throw new Error(t("passwordMismatch"));
+      if (password.length < 8) throw new Error(t("minLength"));
 
       const { error } = await supabase.auth.updateUser({ password });
       if (error) throw error;
 
       setStage("success");
-    } catch (e: any) {
-      setErrorMsg(e?.message ?? "No se pudo actualizar la contraseña.");
+    } catch (e: unknown) {
+      setErrorMsg((e as Error)?.message ?? t("updateError"));
       setStage("ready");
     }
   };
@@ -116,25 +114,32 @@ export default function ResetPasswordPage() {
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-lg mx-auto space-y-8">
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
-            <h1 className="text-xl font-semibold text-skin-title">Restablecer contraseña</h1>
+            <h1 className="text-xl font-semibold text-skin-title">
+              {t("title")}
+            </h1>
             <p className="text-sm text-skin-subtitle">
-              Introduce tu nueva contraseña. Este enlace es de un solo uso y caduca.
+              {t("subtitle")}
             </p>
 
             {stage === "verifying" && (
-              <div className="text-sm text-skin-subtitle">Verificando enlace…</div>
+              <div className="text-sm text-skin-subtitle">
+                {t("verifying")}
+              </div>
             )}
 
             {stage === "error" && (
               <div className="text-sm text-red-500">
-                {errorMsg ?? "No se pudo validar el enlace de recuperación."}
+                {errorMsg ?? t("validateError")}
               </div>
             )}
 
             {(stage === "ready" || stage === "saving") && (
               <div className="space-y-4">
+                {/* password 1 */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-skin-title">Nueva contraseña</label>
+                  <label className="text-sm font-medium text-skin-title">
+                    {t("newPassword")}
+                  </label>
                   <div className="relative">
                     <input
                       type={showPass1 ? "text" : "password"}
@@ -149,18 +154,21 @@ export default function ResetPasswordPage() {
                       type="button"
                       onClick={() => setShowPass1((s) => !s)}
                       className="absolute top-1/2 right-3 -translate-y-1/2 text-skin-subtitle hover:text-skin-title"
-                      aria-label={showPass1 ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-label={showPass1 ? t("hidePassword") : t("showPassword")}
                     >
                       {showPass1 ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                   <p className="text-xs text-skin-subtitle">
-                    Mínimo 8 caracteres. Añade números y símbolos para más seguridad.
+                    {t("passwordHint")}
                   </p>
                 </div>
 
+                {/* password 2 */}
                 <div className="flex flex-col gap-2">
-                  <label className="text-sm font-medium text-skin-title">Repite la contraseña</label>
+                  <label className="text-sm font-medium text-skin-title">
+                    {t("repeatPassword")}
+                  </label>
                   <div className="relative">
                     <input
                       type={showPass2 ? "text" : "password"}
@@ -175,21 +183,25 @@ export default function ResetPasswordPage() {
                       type="button"
                       onClick={() => setShowPass2((s) => !s)}
                       className="absolute top-1/2 right-3 -translate-y-1/2 text-skin-subtitle hover:text-skin-title"
-                      aria-label={showPass2 ? "Ocultar contraseña" : "Mostrar contraseña"}
+                      aria-label={showPass2 ? t("hidePassword") : t("showPassword")}
                     >
                       {showPass2 ? <EyeOff size={18} /> : <Eye size={18} />}
                     </button>
                   </div>
                 </div>
 
-                {errorMsg && <div className="text-sm text-red-500">{errorMsg}</div>}
+                {errorMsg && (
+                  <div className="text-sm text-red-500">
+                    {errorMsg}
+                  </div>
+                )}
 
                 <Button
                   onClick={onSubmit}
                   disabled={disabled}
                   className="min-w-[160px]"
                 >
-                  {stage === "saving" ? "Guardando…" : "Actualizar contraseña"}
+                  {stage === "saving" ? t("saving") : t("updateButton")}
                 </Button>
               </div>
             )}
@@ -197,10 +209,10 @@ export default function ResetPasswordPage() {
             {stage === "success" && (
               <div className="space-y-3">
                 <div className="text-sm text-green-600">
-                  Contraseña actualizada correctamente ✅
+                  {t("success")}
                 </div>
                 <p className="text-sm text-skin-subtitle">
-                  Ya puedes cerrar esta página y entrar con tu nueva contraseña.
+                  {t("successDesc")}
                 </p>
               </div>
             )}

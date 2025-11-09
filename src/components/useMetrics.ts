@@ -49,9 +49,9 @@ export const useMetrics = (
       } else {
         console.warn("useMetrics poll: API ok but data is invalid.");
       }
-    } catch (e: any) {
+    } catch (e: unknown) {
       // no reventamos el estado si falla una vez
-      console.warn("useMetrics poll failed, retaining old data:", e?.message);
+      console.warn("useMetrics poll failed, retaining old data:", (e as Error).message);
     }
   }, [projectId]);
 
