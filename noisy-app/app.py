@@ -36,27 +36,6 @@ def create_order():
         return jsonify({"error": "Internal server error"}), 500
     return jsonify({"status": "created", "order_id": random.randint(1000, 2000)}), 201
 
-
-# --- Endpoint de introspección para el agente ---
-@app.route('/debug/routes')
-def list_routes():
-    """Lista todos los endpoints para que el agente los descubra."""
-    output = []
-    for rule in app.url_map.iter_rules():
-        # Excluimos las rutas de debug/internas y las estáticas
-        if rule.endpoint.startswith(('static', 'list_routes')):
-            continue
-        # Solo nos interesan los métodos que no sean HEAD, OPTIONS
-        methods = sorted([m for m in rule.methods if m not in ('HEAD', 'OPTIONS')])
-        if not methods:
-            continue
-        output.append({
-            "rule": str(rule),
-            "methods": methods
-        })
-    return jsonify(output)
-
-
 def run_flask_app():
     import logging
     log = logging.getLogger('werkzeug')

@@ -302,7 +302,7 @@ networks:
             {/* --- 5. AÑADIR TEXTAREA AL FORMULARIO --- */}
             <Textarea
               placeholder={t("endpointsPlaceholder", { example1: "GET /api/health", example2: "POST /api/login" })}
-              value={newProjectEndpoints}
+              value={newProjectEndpoints} 
               onChange={(e) => setNewProjectEndpoints(e.target.value)}
               className="bg-skin-input border-border focus:ring-[var(--ring)] font-mono text-sm min-h-[120px]"
             />

@@ -183,25 +183,9 @@ def measure_latency(endpoint_info):
     except requests.RequestException as e:
         print(f"  ❌ [LATENCY] {method} {path} -> FAILED: {e}")
 
-def get_endpoints_from_api():
-    """Pide al Dashboard la lista de endpoints a monitorear."""
-    if not CONFIG_URL:
-        return []
-    try:
-        # Usa los headers de autenticación global
-        r = requests.get(CONFIG_URL, headers=AUTH_HEADERS, timeout=10)
-        if r.status_code == 200:
-            data = r.json()
-            endpoints = data.get("endpoints", [])
-            if endpoints:
-                debug(f"Fetched {len(endpoints)} endpoints from API.")
-            return endpoints
-        else:
-            print(f"  ❌ Error fetching config: {r.status_code} {r.text[:100]}")
-            return []
-    except Exception as e:
-        print(f"  ❌ Error fetching config: {e}")
-        return []
+# --- YA NO SE USA LA FUNCION get_endpoints_from_api ---
+# def get_endpoints_from_api():
+#     ...
 
 def latency_loop():
     if not LATENCY_TARGET_URL or not CONFIG_URL:
@@ -211,10 +195,27 @@ def latency_loop():
     print("🔬 Starting latency monitor (mode: API config)...")
 
     while True:
+        endpoints_to_monitor_raw = []
         try:
             # 1. Pide la configuración a la API en cada ciclo
-            endpoints_to_monitor_raw = get_endpoints_from_api()
+            debug(f"Fetching config from {CONFIG_URL}")
+            r = requests.get(CONFIG_URL, headers=AUTH_HEADERS, timeout=10)
             
+            if r.status_code == 200:
+                data = r.json()
+                endpoints_to_monitor_raw = data.get("endpoints", [])
+                if endpoints_to_monitor_raw:
+                    debug(f"Fetched {len(endpoints_to_monitor_raw)} endpoints from API.")
+            else:
+                print(f"  ❌ Error fetching config: {r.status_code} {r.text[:100]}")
+                # No hacer 'continue' aquí, solo usar la lista vacía y esperar al próximo ciclo
+            
+        except Exception as e:
+            print(f"  ❌ Error fetching config: {e}")
+            # En caso de fallo de red, usar lista vacía y reintentar tras el sleep
+        
+        try:
+            # 2. Procesa la lista de endpoints
             endpoints_to_monitor = []
             for item in endpoints_to_monitor_raw:
                 item = item.strip()
@@ -229,7 +230,7 @@ def latency_loop():
                 except Exception as e:
                     print(f"  ❌ Skipping invalid endpoint format from API: '{item}'")
 
-            # 2. Mide la latencia para cada endpoint
+            # 3. Mide la latencia para cada endpoint
             if not endpoints_to_monitor:
                  debug("No endpoints to monitor in this cycle.")
             
@@ -237,14 +238,14 @@ def latency_loop():
                 measure_latency(endpoint_info)
                 time.sleep(1) # Pequeña pausa entre cada endpoint
 
-            # 3. Espera antes de volver a empezar el ciclo
+            # 4. Espera antes de volver a empezar el ciclo
             debug(f"Latency cycle complete. Waiting {LATENCY_EVERY}s...")
             time.sleep(LATENCY_EVERY)
             
         except KeyboardInterrupt:
             break
         except Exception as e:
-            print(f"❌ Latency loop error: {e}")
+            print(f"❌ Latency loop error (inner): {e}")
             time.sleep(LATENCY_EVERY)
 
 # =============== MAIN (Sin cambios) ===============

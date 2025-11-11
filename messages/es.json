@@ -58,7 +58,8 @@
     "deleteError": "No se pudo borrar el proyecto",
     "deleteErrorWithMsg": "Error al borrar: {message}",
     "installAgentTitle": "Instala el agente Docker",
-    "installAgentDesc": "Ejecuta este comando en el servidor donde corren tus contenedores:"
+    "installAgentDesc": "Ejecuta este comando en el servidor donde corren tus contenedores:",
+    "endpointsPlaceholder": "Escribe las rutas a monitorizar por ejemplo: GET /api/health"   
   },
   "LogStream": {
     "title": "Flujo de logs",
@@ -185,7 +186,8 @@
     "latencyMonitoringTitle": "Monitoreo de latencia",
     "latencyMonitoringSubtitle": "Configura las rutas que quieres monitorizar",
     "agentUpdateNotice": "Notificar cambios al agente",
-    "saveChanges": "Guardar cambios"
+    "saveChanges": "Guardar cambios",
+    "saveEndpointsSuccess": "Guardado correctamente"
   },
   "ResetPassword": {
     "title": "Restablecer contraseña",

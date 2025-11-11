@@ -58,7 +58,9 @@
     "deleteError": "Could not delete the project",
     "deleteErrorWithMsg": "Error deleting project: {message}",
     "installAgentTitle": "Install the Docker agent",
-    "installAgentDesc": "Run this command on the server where your containers are running:"
+    "installAgentDesc": "Run this command on the server where your containers are running:",
+    "endpointsPlaceholder": "Type endpoints to be monitorised por ejemplo: GET /api/health"
+  
   },
   "LogStream": {
     "title": "Log Stream",
@@ -185,7 +187,8 @@
     "latencyMonitoringTitle": "Latency monitoring",
     "latencyMonitoringSubtitle": "Configure the endpoints you want to monitor",
     "agentUpdateNotice": "Notify agent changes",
-    "saveChanges": "Save changes"
+    "saveChanges": "Save changes",
+    "saveEndpointsSuccess": "Successfully saved"
   },
   "ResetPassword": {
     "title": "Reset password",
