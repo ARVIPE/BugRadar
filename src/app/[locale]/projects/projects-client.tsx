@@ -4,6 +4,7 @@ import { useState, useEffect, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import {
@@ -38,6 +39,9 @@ export default function ProjectsClient() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState("");
+  // --- 2. AÑADIR NUEVO ESTADO PARA ENDPOINTS ---
+  const [newProjectEndpoints, setNewProjectEndpoints] = useState(""); 
+  
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -72,21 +76,33 @@ export default function ProjectsClient() {
     setCopiedCompose(false);
     setError(null);
 
+    // --- 3. PREPARAR DATOS PARA LA API ---
+    // Convertir el string del textarea en un array limpio
+    const endpointsArray = newProjectEndpoints
+      .split('\n')
+      .map(line => line.trim())
+      .filter(line => line.length > 0 && line.includes(' ')); // Filtra líneas vacías o sin formato
+
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: newProjectName }),
+      // --- 4. ENVIAR NOMBRE Y ENDPOINTS ---
+      body: JSON.stringify({ 
+        name: newProjectName,
+        monitored_endpoints: endpointsArray // Enviar el array
+      }),
     });
 
     if (res.ok) {
       const newProject: Project = await res.json();
       setProjects((prev) => [newProject, ...prev]);
       setNewProjectName("");
-
+      setNewProjectEndpoints(""); // <-- Limpiar el textarea
+      
       if (newProject.apiKey) {
         const slug = slugify(newProject.name || "app");
 
-        // 👇 Compose actualizado (con BUGRADAR_CONTAINERS)
+        // 👇 Compose actualizado (con BUGRADAR_CONFIG_URL y BUGRADAR_LATENCY_TARGET_URL)
         const compose = `
 services:
   ${slug}:
@@ -99,6 +115,8 @@ services:
       - bugradar=true
     environment:
       APP_NAME: "${slug}"
+    networks:
+      - bugradar-net
 
   bugradar-agent:
     image: bugradar/agent:latest
@@ -108,6 +126,11 @@ services:
       BUGRADAR_API_KEY: "${newProject.apiKey}"
       BUGRADAR_API_URL: "${BACKEND_URL}/api/logs"
       BUGRADAR_LATENCY_API_URL: "${BACKEND_URL}/api/latency"
+      
+      # --- URLs para el agente ---
+      BUGRADAR_CONFIG_URL: "${BACKEND_URL}/api/config"
+      BUGRADAR_LATENCY_TARGET_URL: "http://${slug}:5000"
+      
       BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"
       BUGRADAR_CONTAINERS: "${slug}"
       BUGRADAR_TAIL: "100"
@@ -131,7 +154,8 @@ networks:
     }
     setIsCreating(false);
   };
-
+  
+  // ... (resto de funciones: handleCopyCompose, selectProject, handleDeleteProject) ...
   const handleCopyCompose = () => {
     if (dockerCompose) {
       navigator.clipboard.writeText(dockerCompose);
@@ -164,7 +188,8 @@ networks:
     }
   };
 
-  // Render
+
+  // ... (Render)
   if (isLoading)
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
@@ -172,7 +197,7 @@ networks:
         <p className="mt-4 text-skin-subtitle">{t("loadingProjects")}</p>
       </div>
     );
-
+    
   return (
     <div className="min-h-screen w-full bg-skin-bg text-skin-title">
       <Navbar />
@@ -273,6 +298,15 @@ networks:
               onChange={(e) => setNewProjectName(e.target.value)}
               className="bg-skin-input border-border focus:ring-[var(--ring)]"
             />
+            
+            {/* --- 5. AÑADIR TEXTAREA AL FORMULARIO --- */}
+            <Textarea
+              placeholder={t("endpointsPlaceholder", { example1: "GET /api/health", example2: "POST /api/login" })}
+              value={newProjectEndpoints}
+              onChange={(e) => setNewProjectEndpoints(e.target.value)}
+              className="bg-skin-input border-border focus:ring-[var(--ring)] font-mono text-sm min-h-[120px]"
+            />
+            
             <Button
               type="submit"
               disabled={isCreating || !newProjectName}
