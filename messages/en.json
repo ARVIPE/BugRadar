@@ -181,7 +181,11 @@
     "resetSent": "We've sent you an email to reset your password.",
     "securityTitle": "Security & profile",
     "securitySubtitle": "Change your avatar and reset your password any time.",
-    "sendResetLink": "Send password reset link"
+    "sendResetLink": "Send password reset link",
+    "latencyMonitoringTitle": "Latency monitoring",
+    "latencyMonitoringSubtitle": "Configure the endpoints you want to monitor",
+    "agentUpdateNotice": "Notify agent changes",
+    "saveChanges": "Save changes"
   },
   "ResetPassword": {
     "title": "Reset password",

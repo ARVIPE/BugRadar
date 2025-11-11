@@ -181,7 +181,11 @@
     "resetSent": "Te hemos enviado un email para restablecer la contraseña.",
     "securityTitle": "Seguridad y perfil",
     "securitySubtitle": "Cambia tu foto y restablece tu contraseña cuando lo necesites.",
-    "sendResetLink": "Enviar enlace de restablecimiento de contraseña"
+    "sendResetLink": "Enviar enlace de restablecimiento de contraseña",
+    "latencyMonitoringTitle": "Monitoreo de latencia",
+    "latencyMonitoringSubtitle": "Configura las rutas que quieres monitorizar",
+    "agentUpdateNotice": "Notificar cambios al agente",
+    "saveChanges": "Guardar cambios"
   },
   "ResetPassword": {
     "title": "Restablecer contraseña",
