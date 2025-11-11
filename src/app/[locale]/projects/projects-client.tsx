@@ -81,7 +81,19 @@ export default function ProjectsClient() {
     const endpointsArray = newProjectEndpoints
       .split('\n')
       .map(line => line.trim())
-      .filter(line => line.length > 0 && line.includes(' ')); // Filtra líneas vacías o sin formato
+      .filter(line => line.length > 0);
+
+
+    // --- Validar formato ---
+    const invalid = endpointsArray.filter(
+      line => !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/.test(line)
+    );
+
+    if (invalid.length > 0) {
+      setError(`Algunas líneas no tienen formato válido (ejemplo: "GET /api/health"):\n${invalid.join('\n')}`);
+      setIsCreating(false);
+      return;
+    }
 
     const res = await fetch("/api/projects", {
       method: "POST",

@@ -74,7 +74,6 @@ export async function PATCH(
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
     const userId = session.user.id;
-    const projectId = params.id;
 
     const body = await req.json();
     const parsed = UpdateProjectSchema.safeParse(body);
@@ -87,7 +86,9 @@ export async function PATCH(
       return NextResponse.json({ error: "No hay datos para actualizar" }, { status: 400 });
     }
 
-    if (!await verifyUserProject(userId, projectId)) {
+    const projectId = params.id;
+
+    if (!(await verifyUserProject(userId, projectId))) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 

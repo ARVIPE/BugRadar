@@ -138,7 +138,23 @@ export default function SettingsClient() {
     const endpointsArray = endpoints
       .split("\n")
       .map((line) => line.trim())
-      .filter((line) => line.length > 0 && line.includes(" "));
+      .filter((line) => line.length > 0);
+
+      // validar TODAS las líneas no vacías
+      const invalid = endpointsArray.filter(
+        (line) =>
+          !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/i.test(line)
+      );
+
+      if (invalid.length > 0) {
+        setError(
+          `Algunas líneas no tienen formato válido (ej: "GET /api/health"):\n${invalid.join(
+            "\n"
+          )}`
+        );
+        setIsSavingEndpoints(false);
+        return;
+      }
 
     try {
       const res = await fetch(`/api/projects/${projectId}`, { // Usa el PATCH que creamos
