@@ -42,10 +42,9 @@ export default withAuth(
 
     const segments = pathname.split("/");
     const currentLocale = segments[1];
-    const locale =
-      locales.includes(currentLocale as (typeof locales)[number])
-        ? currentLocale
-        : defaultLocale;
+    const locale = locales.includes(currentLocale as (typeof locales)[number])
+      ? currentLocale
+      : defaultLocale;
 
     // si está logueado y está en /{locale} o /{locale}/signup → redirige a /{locale}/projects
     if (
@@ -62,7 +61,20 @@ export default withAuth(
       signIn: `/${defaultLocale}`,
     },
     callbacks: {
-      authorized: ({ token }) => !!token,
+      authorized: ({ token, req }) => {
+        const pathname = req.nextUrl.pathname;
+
+        if (
+          pathname === "/es" ||
+          pathname === "/en" ||
+          pathname.startsWith("/es/signup") ||
+          pathname.startsWith("/en/signup")
+        ) {
+          return true;
+        }
+
+        return !!token;
+      },
     },
   }
 );

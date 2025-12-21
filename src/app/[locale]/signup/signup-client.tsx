@@ -10,7 +10,7 @@ import { useLocale, useTranslations } from "next-intl";
 
 export default function SignupClient() {
   const locale = useLocale();
-  const t = useTranslations("Signup"); // 👈 nuevo namespace
+  const t = useTranslations("Signup"); 
   const router = useRouter();
 
   const [email, setEmail] = useState("");

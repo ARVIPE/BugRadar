@@ -21,7 +21,7 @@ const supabase = createClient(
 
 export default function SettingsClient() {
   const { data: session } = useSession();
-  const { projectId } = useProject(); // <-- NUEVO: Hook para el proyecto
+  const { projectId } = useProject(); 
   const t = useTranslations("Settings");
   const locale = useLocale();
 
@@ -55,7 +55,6 @@ export default function SettingsClient() {
     })();
   }, [sessionEmail]);
 
-  // --- NUEVO: Cargar endpoints del proyecto actual ---
   useEffect(() => {
     if (!projectId) {
       setIsLoadingEndpoints(false);
