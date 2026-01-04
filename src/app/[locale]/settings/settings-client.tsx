@@ -72,8 +72,8 @@ export default function SettingsClient() {
         }
         const data: { monitored_endpoints: string[] | null } = await res.json();
         setEndpoints((data.monitored_endpoints || []).join("\n"));
-      } catch (err: any) {
-        setError(err.message);
+      } catch (err: unknown) {
+        setError((err as Error).message);
       } finally {
         setIsLoadingEndpoints(false);
       }
@@ -166,8 +166,8 @@ export default function SettingsClient() {
         throw new Error(errData.error || "No se pudo guardar");
       }
       setSuccess(t("saveEndpointsSuccess")); // <-- Feedback de éxito
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err: unknown) {
+      setError((err as Error).message);
     } finally {
       setIsSavingEndpoints(false);
     }

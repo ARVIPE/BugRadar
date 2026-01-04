@@ -29,25 +29,29 @@ const verifyUserProject = async (userId: string, projectId: string): Promise<boo
   return !error && !!data;
 };
 
-
-// --- NUEVA FUNCIÓN GET (para cargar los ajustes) ---
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function GET(req: Request, context: unknown) {
   try {
+    // Narrowing seguro para obtener params
+    if (typeof context !== "object" || context === null) {
+      throw new Error("Context inválido");
+    }
+
+    const ctx = context as { params?: { id: string } };
+    const id = ctx.params?.id;
+    if (!id) throw new Error("ID no proporcionado");
+
     const session = await getServerSession(authConfig);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
-    const userId = session.user.id;
-    const projectId = params.id;
 
-    if (!await verifyUserProject(userId, projectId)) {
+    const userId = session.user.id;
+    const projectId = id;
+
+    if (!(await verifyUserProject(userId, projectId))) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    // Si es el dueño, obtén los datos
     const { data, error } = await supabaseAdmin()
       .from("projects")
       .select("id, name, monitored_endpoints")
@@ -58,21 +62,29 @@ export async function GET(
 
     return NextResponse.json(data);
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error en GET /api/projects/[id]:", error);
-    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Error interno";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
-export async function PATCH(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
+export async function PATCH(req: Request, context: unknown) {
   try {
+    // Narrowing seguro
+    if (typeof context !== "object" || context === null) {
+      throw new Error("Context inválido");
+    }
+
+    const ctx = context as { params?: { id: string } };
+    const projectId = ctx.params?.id;
+    if (!projectId) throw new Error("ID no proporcionado");
+
     const session = await getServerSession(authConfig);
     if (!session?.user?.id) {
       return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
+
     const userId = session.user.id;
 
     const body = await req.json();
@@ -86,8 +98,6 @@ export async function PATCH(
       return NextResponse.json({ error: "No hay datos para actualizar" }, { status: 400 });
     }
 
-    const projectId = params.id;
-
     if (!(await verifyUserProject(userId, projectId))) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
@@ -95,7 +105,7 @@ export async function PATCH(
     // Actualizar el proyecto
     const { error: updateError } = await supabaseAdmin()
       .from("projects")
-      .update(parsed.data) // Sube los campos validados (ej: { monitored_endpoints: [...] })
+      .update(parsed.data)
       .eq("id", projectId);
 
     if (updateError) {
@@ -105,9 +115,10 @@ export async function PATCH(
 
     return NextResponse.json({ ok: true }, { status: 200 });
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error en PATCH /api/projects/[id]:", error);
-    return NextResponse.json({ error: error.message || "Error interno" }, { status: 500 });
+    const message = error instanceof Error ? error.message : "Error interno";
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

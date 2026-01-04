@@ -88,8 +88,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ...projectData, apiKey }, { status: 201 });
     
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Error en POST /api/projects:", error);
-    return NextResponse.json({ error: error.message || "Error interno del servidor" }, { status: 500 });
+    return NextResponse.json({ error: (error as Error).message || "Error interno del servidor" }, { status: 500 });
   }
 }

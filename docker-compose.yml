@@ -1,4 +1,3 @@
-
 services:
   noisy-app:
     build:
@@ -20,14 +19,11 @@ services:
     container_name: bugradar-agent
     restart: always
     environment:
-      BUGRADAR_API_KEY: "proj_7bd4ca686419f46eeed730f8a29ef9cc"
+      BUGRADAR_API_KEY: "proj_5712312b700beeebb51d6d59f6f619c2"
       BUGRADAR_API_URL: "http://host.docker.internal:3000/api/logs"
       BUGRADAR_LATENCY_API_URL: "http://host.docker.internal:3000/api/latency"
-      
-      # --- URLs para el agente ---
       BUGRADAR_CONFIG_URL: "http://host.docker.internal:3000/api/config"
       BUGRADAR_LATENCY_TARGET_URL: "http://noisy-app:5000"
-      
       BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"
       BUGRADAR_CONTAINERS: "noisy-app"
       BUGRADAR_TAIL: "100"

@@ -113,8 +113,6 @@ export default function ProjectsClient() {
       
       if (newProject.apiKey) {
         const slug = slugify(newProject.name || "app");
-
-        // 👇 Compose actualizado (con BUGRADAR_CONFIG_URL y BUGRADAR_LATENCY_TARGET_URL)
         const compose = `
 services:
   ${slug}:
@@ -131,6 +129,8 @@ services:
       - bugradar-net
 
   bugradar-agent:
+    build:
+      context: ./agent
     image: bugradar/agent:latest
     container_name: bugradar-agent
     restart: always
@@ -193,8 +193,8 @@ networks:
       const res = await fetch(`/api/projects/${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error((await res.json()).error);
       setProjects((prev) => prev.filter((p) => p.id !== id));
-    } catch (err: any) {
-      setError(t("deleteErrorWithMsg", { message: err.message }));
+    } catch (err: unknown) {
+      setError(t("deleteErrorWithMsg", { message: (err as Error).message }));
     } finally {
       setDeletingId(null);
     }

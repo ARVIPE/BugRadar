@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, PostgrestError } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 
 const supabaseAdmin = () =>
@@ -17,11 +17,18 @@ async function getProjectIdFromApiKey(
   }
   const hashedKey = createHash("sha256").update(apiKey).digest("hex");
   
-  const { data, error }: { data: { project_id: string } | null; error: any } = await supabaseAdmin()
+    const {
+    data,
+    error,
+  }: {
+    data: { project_id: string } | null;
+    error: PostgrestError | null;
+  } = await supabaseAdmin()
     .from("project_api_keys")
     .select("project_id")
     .eq("hashed_key", hashedKey)
     .single();
+
 
   if (error || !data) {
     console.warn("Invalid API key (config):", apiKey.substring(0, 10) + "...");
@@ -45,7 +52,7 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "API Key inválida" }, { status: 403 });
     }
 
-    const { data, error }: { data: { monitored_endpoints: string[] | null } | null; error: any } = await supabaseAdmin()
+    const { data, error }: { data: { monitored_endpoints: string[] | null } | null; error: PostgrestError | null } = await supabaseAdmin()
       .from("projects")
       .select("monitored_endpoints")
       .eq("id", projectId)
