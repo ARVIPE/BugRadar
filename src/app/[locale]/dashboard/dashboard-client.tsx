@@ -52,7 +52,7 @@ export default function DashboardClient() {
         </div>
 
         <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
-          <div className="relative bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5 h-[126px]">
+          <div className="relative bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5 h-[126px] ">
             <h2 className="text-sm font-medium text-skin-subtitle">
               {t("activeErrors")}
             </h2>

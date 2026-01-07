@@ -101,7 +101,7 @@ export default function AvatarUpload() {
         className="rounded-full border-2 border-border bg-gray-500 object-cover"
       />
       <div className="flex flex-col items-center sm:items-start">
-        <Button asChild className="relative cursor-pointer">
+        <Button asChild className="relative cursor-pointer bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600">
           <div>
             <Upload size={16} className="mr-2"/>
             {uploading ? 'Subiendo...' : 'Subir nueva foto'}

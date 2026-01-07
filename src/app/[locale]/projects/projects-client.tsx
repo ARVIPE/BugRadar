@@ -322,7 +322,7 @@ networks:
             <Button
               type="submit"
               disabled={isCreating || !newProjectName}
-              className="w-full"
+              className="w-full bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600"
             >
               {isCreating ? (
                 <Loader2 className="w-4 h-4 animate-spin" />

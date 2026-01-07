@@ -228,7 +228,7 @@ export default function SettingsClient() {
                     />
                     <Button
                       onClick={handleUpdateNotifyEmail}
-                      className="min-w-[130px]"
+                      className="min-w-[130px] bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600"
                     >
                       {t("save")}
                     </Button>
@@ -272,6 +272,7 @@ export default function SettingsClient() {
               </p>
               <Button
                 onClick={handleSaveEndpoints}
+                className="bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600"
                 disabled={isSavingEndpoints || isLoadingEndpoints || !projectId}
               >
                 {isSavingEndpoints ? (
@@ -295,7 +296,7 @@ export default function SettingsClient() {
             <div className="space-y-6">
               <AvatarUpload />
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={handleSendResetLink}>
+                <Button onClick={handleSendResetLink} className="bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600">
                   {t("sendResetLink")}
                 </Button>
               </div>

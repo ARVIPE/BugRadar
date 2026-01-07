@@ -215,7 +215,7 @@ export default function LogStream({ projectId }: LogStreamProps) {
             className={`px-4 py-2 flex-1 transition-colors
               ${
                 activeTab === tab.key
-                  ? "bg-primary text-primary-foreground font-semibold"
+                  ? "bg-amber-400 text-slate-900 hover:bg-amber-500 focus:ring-2 focus:ring-amber-600"
                   : "text-skin-subtitle hover:text-skin-title hover:bg-skin-panel"
               }`}
           >
