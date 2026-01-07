@@ -1,4 +1,3 @@
-// @vitest-environment happy-dom
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useLatency } from '../src/components/useLatency';
@@ -56,7 +55,7 @@ describe('Hook: useLatency', () => {
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
-      // Según tu código, si falla mantiene el estado anterior (null en este caso)
+      // Si falla mantiene el estado anterior
       expect(result.current.data).toBeNull();
     });
   });
