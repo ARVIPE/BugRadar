@@ -1,4 +1,3 @@
-// [New File: src/hooks/useProject.ts]
 "use client";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
