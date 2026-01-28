@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Definición de Mocks
+// Mock definitions
 vi.mock('@/app/[locale]/settings/actions', () => ({
   getNotifyEmailFor: vi.fn(() => Promise.resolve('test@example.com')),
 }));
 
 vi.mock('resend', () => {
-  // Usamos una función tradicional para que funcione como constructor (new Resend)
-  const ResendMock = function() {
+  // Use a traditional function so it works as a constructor (new Resend)
+  const ResendMock = function(this: { emails: { send: ReturnType<typeof vi.fn> } }) {
     this.emails = {
       send: vi.fn().mockResolvedValue({ data: { id: '123' }, error: null })
     };
@@ -36,7 +36,7 @@ vi.mock('@supabase/supabase-js', () => ({
   })),
 }));
 
-// Importación de la función a testear después de los mocks
+// Import the function to test after the mocks
 import { POST } from '../src/app/api/logs/route';
 
 describe('POST /api/logs', () => {
@@ -54,8 +54,8 @@ describe('POST /api/logs', () => {
 
   it('debería validar errores de esquema con Zod (400 Bad Request)', async () => {
     const logInvalido = { 
-      log_message: "", // Inválido por longitud mínima
-      severity: 'invalid-severity' // No está en el enum
+      log_message: "", 
+      severity: 'invalid-severity' 
     };
     
     const request = new Request('http://localhost/api/logs', {

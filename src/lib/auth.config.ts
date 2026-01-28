@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { SupabaseAdapter } from "@auth/supabase-adapter";
 import { createClient } from "@supabase/supabase-js";
 
-// --- extendemos tipos para que TS conozca los campos custom ---
+
 declare module "next-auth" {
   interface Session {
     supabaseAccessToken?: string;
@@ -27,7 +27,7 @@ declare module "next-auth/jwt" {
   }
 }
 
-// --- config principal ---
+
 export const authConfig: AuthOptions = {
   adapter: SupabaseAdapter({
     url: process.env.SUPABASE_URL as string,
@@ -82,7 +82,7 @@ export const authConfig: AuthOptions = {
 
   callbacks: {
     async jwt({ token, user }) {
-      // Primera vez (login)
+      // First time (login)
       if (user) {
         token.sub = user.id;
         token.picture = user.image;
@@ -90,7 +90,7 @@ export const authConfig: AuthOptions = {
         return token;
       }
 
-      // Refresco en peticiones posteriores
+      // Refresh on subsequent requests
       if (!token.sub) return token;
 
       const supabase = createClient(
@@ -109,7 +109,7 @@ export const authConfig: AuthOptions = {
             : null;
         }
       } catch (error) {
-        console.error("Error refrescando token:", error);
+        console.error("Error refreshing token:", error);
       }
 
       return token;

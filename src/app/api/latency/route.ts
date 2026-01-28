@@ -2,10 +2,9 @@ import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createHash } from "crypto";
-import { getServerSession } from "next-auth/next"; // <-- AÑADIDO
+import { getServerSession } from "next-auth/next"; 
 import { authConfig } from "@/lib/auth.config";
 
-// Tu patrón de cliente admin
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -13,7 +12,6 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-// --- Helper de API Key (para el agente) ---
 async function getProjectIdFromApiKey(
   apiKey: string
 ): Promise<string | null> {
@@ -27,9 +25,7 @@ async function getProjectIdFromApiKey(
   if (error || !data) return null;
   return data.project_id;
 }
-// --- Fin del Helper ---
 
-// Schema para el POST
 const LatencySchema = z.object({
   endpoint: z.string().min(1),
   method: z.string().min(1),
@@ -37,10 +33,9 @@ const LatencySchema = z.object({
   status_code: z.number().int(),
 });
 
-// --- POST (Para el Agente) ---
+
 export async function POST(req: Request) {
   try {
-    // Autenticación por API Key
     const authHeader = req.headers.get("Authorization");
     const apiKey = authHeader?.split(" ")[1];
     if (!apiKey) {
@@ -79,15 +74,12 @@ export async function POST(req: Request) {
   }
 }
 
-// --- GET (Para el Frontend - useLatency) ---
 export async function GET(req: Request) {
-  // 1. Autenticación del usuario (next-auth)
   const session = await getServerSession(authConfig);
   if (!session || !session.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // 2. Obtener Project ID
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("project_id");
   if (!projectId) {
@@ -96,7 +88,6 @@ export async function GET(req: Request) {
 
   const db = supabase();
 
-  // 3. Comprobación de Seguridad
   const { data: projectData, error: projectError } = await db
     .from("projects")
     .select("id")
@@ -107,10 +98,8 @@ export async function GET(req: Request) {
   if (projectError || !projectData) {
     return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
   }
-  // --- Fin Comprobación ---
 
   try {
-    // 4. Obtener datos de latencia (últimas 24h)
     const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     
     const { data, error } = await db
@@ -122,7 +111,6 @@ export async function GET(req: Request) {
 
     if (error) throw error;
 
-    // Devolvemos como 'items' (como espera useLatency)
     return NextResponse.json({ items: data });
 
   } catch (error: unknown) {

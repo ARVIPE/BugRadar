@@ -35,7 +35,6 @@ export default function ResetPasswordClient() {
         const url = new URL(window.location.href);
         const code = url.searchParams.get("code");
 
-        // 1) Nuevo flujo: ?code=...
         if (code) {
           const { error } = await supabase.auth.exchangeCodeForSession(code);
           if (error) throw error;
@@ -47,7 +46,6 @@ export default function ResetPasswordClient() {
           return;
         }
 
-        // 2) Flujo legacy con hash
         const hash = window.location.hash.startsWith("#")
           ? window.location.hash.substring(1)
           : window.location.hash;
@@ -73,7 +71,6 @@ export default function ResetPasswordClient() {
           return;
         }
 
-        // Si no hay nada válido
         throw new Error(t("invalidLink"));
       } catch (e: unknown) {
         setErrorMsg((e as Error)?.message ?? t("validateError"));

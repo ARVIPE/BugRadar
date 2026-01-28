@@ -9,35 +9,31 @@ export interface LatencyRecord {
   latency_ms: number;
 }
 
-// 1. Añadimos 'projectId' como primer argumento
+// Add 'projectId' as first argument
 export const useLatency = (
-  projectId: string | null, // <-- CAMBIO
+  projectId: string | null, 
   refreshInterval: number
 ) => {
   const [data, setData] = useState<LatencyRecord[] | null>(null);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
-    // 2. No hacer fetch si falta el ID
     if (!projectId) {
       setLoading(false);
       return;
     }
 
-    // (Solo mostrar 'loading' en la carga inicial)
     if (data === null) {
       setLoading(true);
     }
 
     try {
-      // 3. Añadir el projectId a la URL
-      const res = await fetch(`/api/latency?project_id=${projectId}`); // <-- CAMBIO
+      const res = await fetch(`/api/latency?project_id=${projectId}`); 
       if (!res.ok) {
         throw new Error(`Failed to fetch latency: ${res.statusText}`);
       }
       const json = await res.json();
       
-      // 4. Comprobar que 'items' es un array (previene flasheo)
       if (Array.isArray(json.items)) {
         setData(json.items);
       } else {
@@ -45,14 +41,13 @@ export const useLatency = (
       }
     } catch (e: unknown) {
       console.warn("useLatency poll failed, retaining old data", (e as Error).message);
-      // No ponemos setData(null) para evitar el flasheo
     } finally {
       setLoading(false);
     }
-  }, [projectId, data]); // 'data' está aquí para la lógica de setLoading
+  }, [projectId, data]); 
 
   useEffect(() => {
-    reload(); // Carga inicial
+    reload(); // Initial load
     const interval = setInterval(reload, refreshInterval);
     return () => clearInterval(interval);
   }, [reload, refreshInterval]);

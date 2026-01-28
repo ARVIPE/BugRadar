@@ -80,7 +80,7 @@ export default function Navbar() {
   return (
     <nav className="bg-skin-panel p-4 shadow-sm border-b border-border">
       <div className="mx-auto flex items-center justify-between">
-        {/* izquierda */}
+        {/* left */}
         <div className="flex items-center space-x-2">
           <a href={withLocale("/dashboard")} className="flex items-center space-x-2">
             <Image src="/bugradar-logo.png" alt="BugRadar Logo" width={28} height={28} />
@@ -115,9 +115,9 @@ export default function Navbar() {
           </ul>
         </div>
 
-        {/* derecha */}
+        {/* right */}
         <div className="flex items-center space-x-4">
-          {/* idioma */}
+          {/* language */}
           <button
             onClick={handleChangeLocale}
             className="hidden md:flex items-center gap-1 px-2 py-1 rounded-md border border-border text-xs text-skin-title hover:bg-skin-bg transition-colors"
@@ -134,7 +134,7 @@ export default function Navbar() {
             <Cog size={20} />
           </a>
 
-          {/* perfil */}
+          {/* profile */}
           <div className="relative" ref={profileMenuRef}>
             <button onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}>
               <Image
@@ -172,7 +172,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* móvil */}
+          {/* mobile */}
           <button
             className="md:hidden text-skin-subtitle hover:text-skin-title"
             onClick={() => setIsOpen(!isOpen)}
@@ -182,7 +182,7 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* menú móvil */}
+      {/* mobile menu */}
       {isOpen && (
         <div className="md:hidden mt-3 space-y-3 px-2">
           <a href={withLocale("/dashboard")} className={`block font-medium ${linkClass(withLocale("/dashboard"))}`}>

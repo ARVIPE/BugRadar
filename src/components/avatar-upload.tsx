@@ -7,11 +7,11 @@ import { Button } from '@/components/ui/button'
 import { Upload } from 'lucide-react'
 
 export default function AvatarUpload() {
-  // Obtenemos el 'status' para saber si la sesión está cargando
+  // Get the 'status' to know if the session is loading
   const { data: session, status, update: updateSession } = useSession()
   const [uploading, setUploading] = useState(false)
 
-  // La URL del avatar la obtenemos directamente de la sesión. Es la única fuente de verdad.
+  // The avatar URL is obtained directly from the session. It's the single source of truth.
   const currentAvatarUrl = session?.user?.image;
 
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -21,7 +21,7 @@ export default function AvatarUpload() {
     const file = event.target.files[0]
     
     try {
-      // 1. Pedir al backend una URL segura para subir el archivo
+      // Request a secure URL from the backend to upload the file
       const responseUrl = await fetch('/api/user/generate-upload-url', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -34,9 +34,9 @@ export default function AvatarUpload() {
       }
       
       const { signedUrl, path } = await responseUrl.json()
-      if (!signedUrl) throw new Error('La respuesta de la API no incluyó una URL de subida.')
+      if (!signedUrl) throw new Error('The API response did not include an upload URL.')
 
-      // 2. Subir el archivo directamente a Supabase Storage usando la URL pre-firmada
+      // Upload the file directly to Supabase Storage using the pre-signed URL
       const uploadResponse = await fetch(signedUrl, {
         method: 'PUT',
         body: file,
@@ -48,10 +48,10 @@ export default function AvatarUpload() {
         throw new Error(`Error al subir el archivo a Supabase: ${errorText}`);
       }
 
-      // 3. Obtener la URL pública final (limpia, sin parámetros de caché)
+      // Get the final public URL (clean, without cache parameters)
       const cleanAvatarUrl = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/avatars/${path}`
 
-      // 4. Notificar a nuestro backend que actualice el perfil con la URL LIMPIA
+      // Notify our backend to update the profile with the CLEAN URL
       const updateResponse = await fetch('/api/user/update-avatar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -63,10 +63,9 @@ export default function AvatarUpload() {
         throw new Error(`Error del servidor al actualizar el perfil (${updateResponse.status}): ${errorData.error}`);
       }
 
-      // 5. El paso final y más importante:
-      // Pedimos a NextAuth que recargue la sesión. El backend se encargará
-      // de obtener la nueva URL y añadirle el parámetro de caché.
-      // Esto provocará un re-renderizado del componente con la imagen actualizada.
+      // The final and most important step:
+      // Ask NextAuth to reload the session. The backend will handle
+      // fetching the new URL and adding the cache parameter.
       await updateSession()
 
     } catch (error: unknown) {
@@ -76,8 +75,7 @@ export default function AvatarUpload() {
     }
   }
 
-  // Mientras la sesión está cargando (`status === 'loading'`), mostramos un esqueleto.
-  // Esto evita el "parpadeo" de la imagen por defecto.
+  // While the session is loading (`status === 'loading'`), show a skeleton.
   if (status === 'loading') {
     return (
       <div className="flex flex-col sm:flex-row items-center gap-4 animate-pulse">
@@ -90,7 +88,7 @@ export default function AvatarUpload() {
     )
   }
 
-  // Una vez que la sesión ha cargado, mostramos la interfaz real.
+  // Once the session has loaded, show the real interface.
   return (
     <div className="flex flex-col sm:flex-row items-center gap-4">
       <Image

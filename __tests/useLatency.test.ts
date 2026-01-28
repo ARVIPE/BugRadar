@@ -3,13 +3,13 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { useLatency } from '../src/components/useLatency';
 
 describe('Hook: useLatency', () => {
-  // Limpiamos los mocks después de cada test
+  // Clean up mocks after each test
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
   it('debería obtener los registros de latencia y actualizar el estado', async () => {
-    // Definimos los datos de prueba siguiendo la interfaz LatencyRecord
+    // Define test data following the LatencyRecord interface
     const mockLatencyData = {
       items: [
         { 
@@ -22,40 +22,40 @@ describe('Hook: useLatency', () => {
       ]
     };
     
-    // Mockeamos fetch para devolver la estructura que espera tu hook (json.items)
+    // Mock fetch to return the structure expected by the hook (json.items)
     global.fetch = vi.fn().mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockLatencyData),
     });
 
-    // Renderizamos el hook con los 2 parámetros obligatorios
+    // Render the hook with the 2 required parameters
     const { result } = renderHook(() => useLatency('project_123', 5000));
 
-    // Verificamos el estado inicial de carga
+    // Verify initial loading state
     expect(result.current.loading).toBe(true);
 
-    // Esperamos a que la petición asíncrona termine y actualice el estado
+    // Wait for the async request to finish and update state
     await waitFor(() => {
-      // Comprobamos que loading sea false y data contenga los "items"
+      // Check that loading is false and data contains the "items"
       expect(result.current.loading).toBe(false);
       expect(result.current.data).toEqual(mockLatencyData.items);
     });
 
-    // Verificamos que se haya llamado a la URL correcta con el project_id
+    // Verify that the correct URL was called with the project_id
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining('project_id=project_123')
     );
   });
 
   it('debería dejar de cargar (loading: false) si falla la petición', async () => {
-    // Simulamos un error de red
+    // Simulate a network error
     global.fetch = vi.fn().mockRejectedValue(new Error('Network Error'));
 
     const { result } = renderHook(() => useLatency('project_123', 5000));
 
     await waitFor(() => {
       expect(result.current.loading).toBe(false);
-      // Si falla mantiene el estado anterior
+      // If it fails, it maintains the previous state
       expect(result.current.data).toBeNull();
     });
   });

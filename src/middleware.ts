@@ -11,7 +11,7 @@ const intlMiddleware = createIntlMiddleware({
   defaultLocale,
 });
 
-// redirect raíz "/" → "/es"
+// redirect root "/" → "/es"
 function baseRedirect(request: NextRequest) {
   const url = new URL(request.url);
   if (url.pathname === "/") {
@@ -24,20 +24,20 @@ export default withAuth(
   function middleware(request) {
     const { pathname } = request.nextUrl;
 
-    // 1. redirect raíz
+    // redirect root
     const rootRedirect = baseRedirect(request);
     if (rootRedirect) return rootRedirect;
 
-    // 2. no interceptar API
+    // don't intercept API
     if (pathname.startsWith("/api")) {
       return NextResponse.next();
     }
 
-    // 3. i18n
+    // i18n
     const intlResponse = intlMiddleware(request);
     if (intlResponse) return intlResponse;
 
-    // 4. lógica extra de auth
+    // extra auth logic
     const token = request.nextauth.token;
 
     const segments = pathname.split("/");
@@ -46,7 +46,7 @@ export default withAuth(
       ? currentLocale
       : defaultLocale;
 
-    // si está logueado y está en /{locale} o /{locale}/signup → redirige a /{locale}/projects
+    // if logged in and at /{locale} or /{locale}/signup → redirect to /{locale}/projects
     if (
       token &&
       (pathname === `/${locale}` || pathname === `/${locale}/signup`)

@@ -39,7 +39,6 @@ export default function ProjectsClient() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState("");
-  // --- 2. AÑADIR NUEVO ESTADO PARA ENDPOINTS ---
   const [newProjectEndpoints, setNewProjectEndpoints] = useState(""); 
   
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +48,6 @@ export default function ProjectsClient() {
   const [dockerCompose, setDockerCompose] = useState<string | null>(null);
   const [copiedCompose, setCopiedCompose] = useState(false);
 
-  // Cargar proyectos existentes
   useEffect(() => {
     fetch("/api/projects")
       .then((res) => {
@@ -66,7 +64,7 @@ export default function ProjectsClient() {
       .finally(() => setIsLoading(false));
   }, [t]);
 
-  // Crear proyecto
+
   const handleCreateProject = async (e: FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -76,15 +74,11 @@ export default function ProjectsClient() {
     setCopiedCompose(false);
     setError(null);
 
-    // --- 3. PREPARAR DATOS PARA LA API ---
-    // Convertir el string del textarea en un array limpio
     const endpointsArray = newProjectEndpoints
       .split('\n')
       .map(line => line.trim())
       .filter(line => line.length > 0);
 
-
-    // --- Validar formato ---
     const invalid = endpointsArray.filter(
       line => !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/.test(line)
     );
@@ -98,10 +92,9 @@ export default function ProjectsClient() {
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      // --- 4. ENVIAR NOMBRE Y ENDPOINTS ---
       body: JSON.stringify({ 
         name: newProjectName,
-        monitored_endpoints: endpointsArray // Enviar el array
+        monitored_endpoints: endpointsArray 
       }),
     });
 
@@ -109,7 +102,7 @@ export default function ProjectsClient() {
       const newProject: Project = await res.json();
       setProjects((prev) => [newProject, ...prev]);
       setNewProjectName("");
-      setNewProjectEndpoints(""); // <-- Limpiar el textarea
+      setNewProjectEndpoints(""); 
       
       if (newProject.apiKey) {
         const slug = slugify(newProject.name || "app");
@@ -167,7 +160,6 @@ networks:
     setIsCreating(false);
   };
   
-  // ... (resto de funciones: handleCopyCompose, selectProject, handleDeleteProject) ...
   const handleCopyCompose = () => {
     if (dockerCompose) {
       navigator.clipboard.writeText(dockerCompose);
@@ -201,7 +193,6 @@ networks:
   };
 
 
-  // ... (Render)
   if (isLoading)
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
@@ -222,7 +213,7 @@ networks:
           </div>
         )}
 
-        {/* docker-compose generado */}
+        {/* Docker compose generated */}
         {dockerCompose && (
           <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
             <h3 className="font-semibold text-skin-title mb-2">
@@ -254,7 +245,7 @@ networks:
           </div>
         )}
 
-        {/* Lista de proyectos */}
+        {/* Projects list */}
         <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
           <h2 className="text-xl font-semibold text-skin-title mb-4">
             {t("selectProject")}
@@ -298,7 +289,7 @@ networks:
           </div>
         </div>
 
-        {/* Formulario */}
+        {/* Form */}
         <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-6">
           <h2 className="text-xl font-semibold text-skin-title mb-4">
             {t("createNewTitle")}
@@ -311,7 +302,6 @@ networks:
               className="bg-skin-input border-border focus:ring-[var(--ring)]"
             />
             
-            {/* --- 5. AÑADIR TEXTAREA AL FORMULARIO --- */}
             <Textarea
               placeholder={t("endpointsPlaceholder", { example1: "GET /api/health", example2: "POST /api/login" })}
               value={newProjectEndpoints} 

@@ -7,7 +7,7 @@ interface MetricData {
   logsLastHour: number;
 }
 
-// comparación simple para saber si las métricas cambiaron
+// simple comparison to check if metrics changed
 function sameMetrics(a: MetricData | null, b: MetricData | null) {
   if (a === b) return true;
   if (!a || !b) return false;
@@ -25,7 +25,7 @@ export const useMetrics = (
   const [data, setData] = useState<MetricData | null>(null);
 
   const reload = useCallback(async () => {
-    // si aún no hay projectId, no molestamos
+    // if there's no projectId yet, don't bother
     if (!projectId) return;
 
     try {
@@ -37,12 +37,12 @@ export const useMetrics = (
       }
       const json = await res.json();
 
-      // validar datos
+      // validate data
       if (json && typeof json.activeErrors === "number") {
-        // 👇 solo seteamos si cambió algo
+        // only set if something changed
         setData((prev) => {
           if (sameMetrics(prev, json)) {
-            return prev; // no hay cambios -> no re-render
+            return prev; // no changes -> no re-render
           }
           return json;
         });
@@ -50,13 +50,13 @@ export const useMetrics = (
         console.warn("useMetrics poll: API ok but data is invalid.");
       }
     } catch (e: unknown) {
-      // no reventamos el estado si falla una vez
+      // don't break state if it fails once
       console.warn("useMetrics poll failed, retaining old data:", (e as Error).message);
     }
   }, [projectId]);
 
   useEffect(() => {
-    // carga inicial
+    // initial load
     reload();
 
     const interval = setInterval(reload, refreshInterval);

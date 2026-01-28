@@ -2,17 +2,17 @@
 
 import { type DefaultSession } from "next-auth";
 
-// Extiende el módulo 'next-auth' para añadir propiedades a la sesión.
+// Extends the 'next-auth' module to add properties to the session.
 declare module "next-auth" {
   /**
-   * Extiende la interfaz de la Sesión para incluir el ID del usuario.
-   * Esto hace que `session.user.id` esté disponible y tipado en toda tu aplicación.
+   * Extends the Session interface to include the user ID.
+   * This makes `session.user.id` available and typed throughout your application.
    */
   interface Session {
     supabaseAccessToken?: string;
     user: {
-      id: string; // El ID de tu usuario (de Supabase en este caso)
-    } & DefaultSession["user"]; // Mantiene las propiedades por defecto (name, email, image)
+      id: string; // The ID of your user (from Supabase in this case)
+    } & DefaultSession["user"]; // Maintains default properties (name, email, image)
   }
 
   interface User {

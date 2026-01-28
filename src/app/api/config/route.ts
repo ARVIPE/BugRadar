@@ -63,7 +63,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    // Devolvemos la lista de endpoints
     return NextResponse.json({ 
       endpoints: data.monitored_endpoints || [] 
     }, { status: 200 });

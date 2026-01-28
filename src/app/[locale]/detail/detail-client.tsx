@@ -42,11 +42,9 @@ export default function DetailClient({}: { id: string }) {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-2xl md:text-3xl font-bold mb-2">
-              {/* aquí podrías poner el mensaje real si lo traes por fetch */}
               {t("title")}
             </h1>
             <p className="text-sm text-skin-subtitle">
-              {/* en real: timestamp del evento */}
               {t("timestampExample")}
             </p>
             <Button onClick={handleBack} className="mt-4">

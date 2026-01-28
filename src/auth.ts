@@ -6,7 +6,7 @@ import { SupabaseAdapter } from "@auth/supabase-adapter"
 import { createClient } from "@supabase/supabase-js"
 import type { AuthOptions } from "next-auth"
 
-// Definimos la configuración aquí mismo, en el archivo original.
+// Define the configuration here, in the original file.
 export const authConfig = {
   adapter: SupabaseAdapter({
     url: process.env.SUPABASE_URL as string,
@@ -59,9 +59,8 @@ export const authConfig = {
     strategy: "jwt",
   },
   callbacks: {
-    // --- ESTA ES LA MODIFICACIÓN CLAVE ---
     async jwt({ token, user }) {
-      // Al iniciar sesión, 'user' existe. Guardamos los datos iniciales.
+      // On login, 'user' exists. We save the initial data.
       if (user) {
         token.sub = user.id;
         token.picture = user.image;
@@ -69,8 +68,8 @@ export const authConfig = {
         return token;
       }
 
-      // En las siguientes peticiones, 'user' no existe.
-      // Usamos el 'sub' (ID de usuario) del token para refrescar los datos.
+      // In subsequent requests, 'user' does not exist.
+      // We use the 'sub' (user ID) from the token to refresh the data.
       if (!token.sub) return token;
 
       const supabase = createClient(
@@ -83,14 +82,14 @@ export const authConfig = {
         if (userData?.user) {
            const avatarUrl = userData.user.user_metadata?.avatar_url;
           if (avatarUrl) {
-          // Actualizamos el token con la URL de la imagen más reciente desde la BD
+          // Update the token with the most recent image URL from the DB
           token.picture = `${avatarUrl}?v=${new Date().getTime()}`;
           }else{
             token.picture = null;
           }
         }
       } catch (error) {
-        console.error("Error al refrescar los datos del usuario en el token:", error);
+        console.error("Error refreshing user data in token:", error);
       }
 
       return token;

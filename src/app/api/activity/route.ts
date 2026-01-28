@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
-// Tu patrón de cliente admin (Service Role)
+
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -11,7 +11,6 @@ const supabase = () =>
     { auth: { persistSession: false } }
   );
 
-// (El tipo ActivityItem se queda igual)
 type ActivityItem = {
   id: string;
   timestamp: string;
@@ -23,13 +22,12 @@ type ActivityItem = {
 }
 
 export async function GET(req: Request) {
-  // 1. Obtener sesión del usuario (tu método)
   const session = await getServerSession(authConfig);
   if (!session || !session.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   
-  // 2. Obtener el project_id desde la URL
+  // Get the project_id from the URL
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("project_id");
 
@@ -42,8 +40,8 @@ export async function GET(req: Request) {
 
   const db = supabase();
   
-  // 3. Comprobación de Seguridad (Opcional pero Recomendado)
-  // Asegurarnos de que el usuario logueado es dueño de este proyecto
+  // Security Check 
+  // Ensure the logged-in user owns this project
   const { data: projectData, error: projectError } = await db
     .from("projects")
     .select("id")
@@ -54,7 +52,7 @@ export async function GET(req: Request) {
   if (projectError || !projectData) {
     return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
   }
-  // --- Fin de Comprobación ---
+
 
   const activityLimit = 5;
   const lookbackDays = 3;
@@ -63,11 +61,11 @@ export async function GET(req: Request) {
   const sinceISO = sinceDate.toISOString();
 
   try {
-    // 4. Añadir .eq('project_id', projectId) a TODAS las queries
+    // Add .eq('project_id', projectId) to ALL queries
     const { data: newEvents, error: newEventsError } = await db
       .from('events')
       .select('id, created_at, severity, container_name, log_message')
-      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .eq('project_id', projectId)
       .order('created_at', { ascending: false })
       .limit(activityLimit);
 
@@ -76,7 +74,7 @@ export async function GET(req: Request) {
     const { data: resolvedEvents, error: resolvedError } = await db
       .from('events')
       .select('id, severity, container_name, resolved_at, resolved_by')
-      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .eq('project_id', projectId) 
       .gt('resolved_at', sinceISO)
       .order('resolved_at', { ascending: false })
       .limit(activityLimit);
@@ -86,14 +84,12 @@ export async function GET(req: Request) {
     const { data: ignoredEvents, error: ignoredError } = await db
       .from('events')
       .select('id, severity, container_name, ignored_at, ignored_by')
-      .eq('project_id', projectId) // <-- FILTRO AÑADIDO
+      .eq('project_id', projectId)
       .gt('ignored_at', sinceISO)
       .order('ignored_at', { ascending: false })
       .limit(activityLimit);
     
     if (ignoredError) throw ignoredError;
-
-    // --- El resto de tu lógica (buscar emails) es correcta ---
     
     const userIds = new Set<string>();
     resolvedEvents.forEach(e => { if (e.resolved_by) userIds.add(e.resolved_by) });
@@ -102,7 +98,7 @@ export async function GET(req: Request) {
     const emailMap = new Map<string, string>();
     if (userIds.size > 0) {
       const { data: users, error: userError } = await db
-        .from('users') // Asumiendo que tu tabla pública de perfiles se llama 'users'
+        .from('users') 
         .select('id, email')
         .in('id', Array.from(userIds));
 
@@ -123,7 +119,7 @@ export async function GET(req: Request) {
     }));
 
     resolvedEvents.forEach(event => {
-      const email = event.resolved_by ? emailMap.get(event.resolved_by) || 'Usuario (ID: ...' + event.resolved_by.slice(-4) + ')' : 'Sistema';
+      const email = event.resolved_by ? emailMap.get(event.resolved_by) || 'User (ID: ...' + event.resolved_by.slice(-4) + ')' : 'System';
       activities.push({
         id: event.id,
         timestamp: event.resolved_at!,
@@ -134,7 +130,7 @@ export async function GET(req: Request) {
     });
 
     ignoredEvents.forEach(event => {
-      const email = event.ignored_by ? emailMap.get(event.ignored_by) || 'Usuario (ID: ...' + event.ignored_by.slice(-4) + ')' : 'Sistema';
+      const email = event.ignored_by ? emailMap.get(event.ignored_by) || 'User (ID: ...' + event.ignored_by.slice(-4) + ')' : 'System';
       activities.push({
         id: event.id,
         timestamp: event.ignored_at!,

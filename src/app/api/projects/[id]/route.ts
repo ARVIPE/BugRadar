@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/lib/auth.config"; // Usa tu authConfig
+import { authConfig } from "@/lib/auth.config";
 import { createClient } from "@supabase/supabase-js";
 import { z } from "zod";
 
@@ -11,14 +11,11 @@ const supabaseAdmin = () =>
     { auth: { persistSession: false } }
   );
 
-// --- Esquema para la ACTUALIZACIÓN ---
 const UpdateProjectSchema = z.object({
-  // Permitimos actualizar el nombre o los endpoints
   name: z.string().min(1).optional(),
   monitored_endpoints: z.array(z.string()).optional(),
 });
 
-// --- Función para verificar que un usuario es dueño de un proyecto ---
 const verifyUserProject = async (userId: string, projectId: string): Promise<boolean> => {
   const { data, error } = await supabaseAdmin()
       .from("projects")
@@ -31,7 +28,6 @@ const verifyUserProject = async (userId: string, projectId: string): Promise<boo
 
 export async function GET(req: Request, context: unknown) {
   try {
-    // Narrowing seguro para obtener params
     if (typeof context !== "object" || context === null) {
       throw new Error("Context inválido");
     }
@@ -71,7 +67,6 @@ export async function GET(req: Request, context: unknown) {
 
 export async function PATCH(req: Request, context: unknown) {
   try {
-    // Narrowing seguro
     if (typeof context !== "object" || context === null) {
       throw new Error("Context inválido");
     }
@@ -102,7 +97,6 @@ export async function PATCH(req: Request, context: unknown) {
       return NextResponse.json({ error: "Proyecto no encontrado" }, { status: 404 });
     }
 
-    // Actualizar el proyecto
     const { error: updateError } = await supabaseAdmin()
       .from("projects")
       .update(parsed.data)

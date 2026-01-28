@@ -7,12 +7,12 @@ import { NextResponse } from 'next/server'
 export async function POST(request: Request) {
   const session = await getServerSession(authConfig)
   if (!session?.user?.id) {
-    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { fileName } = await request.json()
   if (!fileName) {
-    return NextResponse.json({ error: 'El nombre del archivo es requerido' }, { status: 400 })
+    return NextResponse.json({ error: 'File name is required' }, { status: 400 })
   }
 
   const supabaseAdmin = createClient(
@@ -24,35 +24,32 @@ export async function POST(request: Request) {
   const newFilePath = `${userId}.${fileName.split('.').pop()}`;
 
   try {
-    // 1. Buscamos si ya existe un avatar para este usuario (con cualquier extensión)
+    // Check if an avatar already exists for this user (with any extension)
     const { data: existingFiles, error: listError } = await supabaseAdmin.storage
       .from('avatars')
-      .list('', { // Buscamos en la raíz del bucket
-        search: `${userId}.`, // Con el patrón "id_usuario."
+      .list('', { // Search in the bucket root
+        search: `${userId}.`, // With the pattern "user_id."
       });
 
     if (listError) {
-      console.error("Error al listar avatares existentes:", listError.message);
-      // No detenemos el proceso, por si es un error temporal
+      console.error("Error listing existing avatars:", listError.message);
     }
 
-    // 2. Si encontramos archivos antiguos, los borramos
+    // If we find old files, delete them
     if (existingFiles && existingFiles.length > 0) {
       const filesToDelete = existingFiles.map((file) => file.name);
-      console.log(`Borrando avatares antiguos: ${filesToDelete.join(', ')}`);
+      console.log(`Deleting old avatars: ${filesToDelete.join(', ')}`);
       
       const { error: deleteError } = await supabaseAdmin.storage
         .from('avatars')
         .remove(filesToDelete);
       
       if (deleteError) {
-        // Este error puede ocurrir si el archivo ya no existe, lo que no es crítico.
-        // Lo mostramos en el log del servidor pero no paramos la ejecución.
-        console.warn("Aviso al borrar avatar antiguo:", deleteError.message);
+        console.warn("Warning when deleting old avatar:", deleteError.message);
       }
     }
 
-    // 3. Ahora sí, generamos la URL para subir el nuevo archivo
+    // Now generate the URL to upload the new file
     const { data, error } = await supabaseAdmin.storage
       .from('avatars')
       .createSignedUploadUrl(newFilePath)
@@ -62,7 +59,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ signedUrl: data.signedUrl, path: data.path })
 
   } catch (error: unknown) {
-    console.error("Error crítico al generar la URL de subida:", (error as Error).message);
+    console.error("Critical error generating upload URL:", (error as Error).message);
     return NextResponse.json({ error: (error as Error).message }, { status: 500 })
   }
 }

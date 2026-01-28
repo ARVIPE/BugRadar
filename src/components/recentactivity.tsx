@@ -26,7 +26,7 @@ interface RecentActivityProps {
   projectId: string | null;
 }
 
-// comparación para no rerenderizar si no cambió
+// comparison to avoid re-rendering if nothing changed
 function sameActivities(a: Activity[], b: Activity[]) {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
@@ -47,7 +47,7 @@ function sameActivities(a: Activity[], b: Activity[]) {
   return true;
 }
 
-// mismo tipo de parámetro que usa next-intl
+// same type of parameter used by next-intl
 function formatTimeAgo(
   dateString: string,
   t: (key: string, values?: Record<string, string | number | Date>) => string

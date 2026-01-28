@@ -60,7 +60,7 @@ export default function SignupClient() {
         throw new Error(data.error || "Algo salió mal.");
       }
 
-      // éxito → vuelve al login del mismo idioma
+      // success → returns to login of same language
       router.push(`/${locale}`);
     } catch (err: unknown) {
       setError((err as Error).message);

@@ -48,7 +48,7 @@ export default function StatsClient() {
 
     if (status === "unauthenticated") {
       setLoading(false);
-      router.push(`/${locale}`); // redirige con locale
+      router.push(`/${locale}`); 
       return;
     }
 

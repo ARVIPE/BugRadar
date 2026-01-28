@@ -3,7 +3,6 @@ import { getServerSession } from "next-auth/next";
 import { authConfig } from '@/lib/auth.config';
 import { createClient } from "@supabase/supabase-js";
 
-// Tu patrón de cliente admin
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
@@ -12,13 +11,10 @@ const supabase = () =>
   );
 
 export async function GET(req: Request) {
-  // 1. Obtener sesión del usuario
   const session = await getServerSession(authConfig);
   if (!session || !session.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
-
-  // 2. Obtener el project_id
   const { searchParams } = new URL(req.url);
   const projectId = searchParams.get("project_id");
 
@@ -28,7 +24,7 @@ export async function GET(req: Request) {
 
   const db = supabase();
 
-  // 3. Comprobación de Seguridad
+  // Security check
   const { data: projectData, error: projectError } = await db
     .from("projects")
     .select("id")
@@ -39,10 +35,8 @@ export async function GET(req: Request) {
   if (projectError || !projectData) {
     return NextResponse.json({ error: "Project not found or access denied" }, { status: 403 });
   }
-  // --- Fin de Comprobación ---
 
   try {
-    // 4. LLAMAR A LA FUNCIÓN RPC (sigue llamándose igual)
     const { data, error } = await db.rpc('get_project_recovery_stats', {
       project_id_param: projectId
     });
@@ -52,14 +46,10 @@ export async function GET(req: Request) {
       throw error;
     }
 
-    // 5. Formatear los datos para la gráfica
-    // --- CAMBIO AQUÍ ---
     const chartData = data.map((d: { date: string, avg_recovery_minutes: number }) => ({
       date: new Date(d.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-      // Leemos la nueva columna 'avg_recovery_minutes'
       value: parseFloat(d.avg_recovery_minutes.toFixed(2)) 
     }));
-    // --- FIN DEL CAMBIO ---
 
     if (chartData.length === 0) {
        return NextResponse.json([]);

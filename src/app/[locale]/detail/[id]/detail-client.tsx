@@ -52,14 +52,14 @@ export default function DetailPage({ id }: { id: string }) {
       setLoading(true);
       setChartLoading(true);
       try {
-        // 1. evento principal
+        // main event
         const res = await fetch(`/api/logs/${id}`, { cache: "no-store" });
         if (!res.ok) throw new Error("Not found");
         const ev: EventItem = await res.json();
         if (!mounted) return;
         setEvent(ev);
 
-        // 2. recurrencia por project_id + log_message
+        // recurrence data
         try {
           const recurrenceRes = await fetch(
             `/api/recurrence?project_id=${
@@ -80,7 +80,7 @@ export default function DetailPage({ id }: { id: string }) {
           if (mounted) setChartLoading(false);
         }
 
-        // 3. logs relacionados
+        // related events
         const relRes = await fetch(
           `/api/logs?project_id=${
             ev.project_id

@@ -12,7 +12,6 @@ export default async function LocaleLayout({
 
   let messages;
   try {
-    // estás en src/app/[locale] → subes 2 → src/messages
     messages = (await import(`../../../messages/${locale}.json`)).default;
   } catch {
     notFound();

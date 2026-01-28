@@ -52,7 +52,6 @@ export default function InsightClient() {
   const locale = useLocale();
   const t = useTranslations("Latency");
 
-  // pasamos projectId al hook
   const { data: rawLatencyData, loading } = useLatency(projectId, 15000);
 
   const { chartData, logData } = useMemo(
@@ -60,7 +59,6 @@ export default function InsightClient() {
     [rawLatencyData]
   );
 
-  // loading inicial
   if (status === "loading" || (loading && !rawLatencyData && !projectId)) {
     return (
       <div className="flex h-screen items-center justify-center bg-skin-bg">

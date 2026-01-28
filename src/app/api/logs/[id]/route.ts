@@ -15,7 +15,6 @@ type RouteContext<TParams> = {
   params: Promise<TParams>;
 };
 
-// GET /api/logs/[id]
 export async function GET(_req: NextRequest, { params }: RouteContext<{ id: string }>) {
   const { id } = await params;
 
@@ -32,7 +31,6 @@ export async function GET(_req: NextRequest, { params }: RouteContext<{ id: stri
   return NextResponse.json(data, { status: 200 });
 }
 
-// --- PATCH ---
 const PatchSchema = z.object({
   action: z.enum(["resolve", "ignore"]),
   user_id: z.string().uuid().optional(),

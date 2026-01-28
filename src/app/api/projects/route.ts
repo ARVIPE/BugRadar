@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authConfig } from "@/lib/auth.config"; // Usando tu authConfig
+import { authConfig } from "@/lib/auth.config"; 
 import { createClient } from "@supabase/supabase-js";
 import { createHash, randomBytes } from "crypto"; 
 import { z } from "zod";

@@ -6,7 +6,7 @@ export default async function Page({
 }: {
   params: Promise<{ locale: string }>;
 }) {
-  // esto es lo único que Next te obliga a hacer aquí
+  // this is the only thing Next forces me to do here
   await params;
   return <LoginClient />;
 }

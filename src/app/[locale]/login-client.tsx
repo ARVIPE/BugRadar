@@ -11,7 +11,7 @@ import { useTranslations, useLocale } from "next-intl";
 
 export default function LoginClient() {
   const t = useTranslations("Login");
-  const locale = useLocale(); // 👈 ya no lo pasamos por props
+  const locale = useLocale(); 
   const router = useRouter();
 
   const [email, setEmail] = useState("");

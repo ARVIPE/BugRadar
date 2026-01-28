@@ -7,7 +7,7 @@ import { supabaseServer } from "@/lib/supabaseServer";
  */
 async function getAuthUserByEmail(email: string) {
   const sb = supabaseServer();
-  // Paginamos por si acaso (simple, 1..5 páginas)
+  // Paginate just in case (simple, 1..5 pages)
   for (let page = 1; page <= 5; page++) {
     const { data, error } = await sb.auth.admin.listUsers({ page, perPage: 1000 });
     if (error) throw error;
@@ -34,7 +34,7 @@ export async function getNotifyEmailFor(email: string) {
 export async function setNotifyEmailFor(email: string, notifyEmail: string) {
   const sb = supabaseServer();
   const sbUser = await getAuthUserByEmail(email);
-  if (!sbUser) throw new Error("Usuario de Supabase no encontrado para " + email);
+  if (!sbUser) throw new Error("Supabase user not found for " + email);
 
   const newMeta = {
     ...(sbUser.user_metadata || {}),

@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useProject } from "@/hooks/useProject";
 import { Loader2, AlertTriangle, CheckCircle } from "lucide-react";
 
-// Public client Supabase instance (para el reset por email)
+// Public client Supabase instance (for email reset)
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL as string,
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY as string
@@ -27,21 +27,21 @@ export default function SettingsClient() {
 
   const sessionEmail = session?.user?.email ?? "";
 
-  // Estado para emails
+  // State for emails
   const [notificationEmail, setNotificationEmail] = useState("");
   const [newEmail, setNewEmail] = useState("");
   const [loadingEmail, setLoadingEmail] = useState(true);
 
-  // --- NUEVO: Estado para endpoints ---
+  //State for endpoints
   const [endpoints, setEndpoints] = useState<string>("");
   const [isLoadingEndpoints, setIsLoadingEndpoints] = useState(true);
   const [isSavingEndpoints, setIsSavingEndpoints] = useState(false);
 
-  // --- NUEVO: Estado unificado para mensajes ---
+  // Unified state for messages 
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Cargar email actual
+  // Load current email
   useEffect(() => {
     (async () => {
       try {
@@ -65,7 +65,7 @@ export default function SettingsClient() {
       setIsLoadingEndpoints(true);
       setError(null);
       try {
-        const res = await fetch(`/api/projects/${projectId}`); // Usa el GET que creamos
+        const res = await fetch(`/api/projects/${projectId}`);
         if (!res.ok) {
           const err = await res.json();
           throw new Error(err.error || "No se pudo cargar la configuración");
@@ -80,14 +80,14 @@ export default function SettingsClient() {
     };
 
     fetchProjectSettings();
-  }, [projectId]); // Depende del ID del proyecto
+  }, [projectId]);
 
   const clearMessages = () => {
     setError(null);
     setSuccess(null);
   };
 
-  // Guardar nuevo email de notificaciones
+  // Save new notification email
   const handleUpdateNotifyEmail = async () => {
     clearMessages();
     const next = newEmail.trim();
@@ -101,13 +101,13 @@ export default function SettingsClient() {
       await setNotifyEmailFor(sessionEmail, next);
       setNotificationEmail(next);
       setNewEmail("");
-      setSuccess(t("savedNotifyEmail")); // <-- Feedback de éxito
+      setSuccess(t("savedNotifyEmail"));
     } catch (e: unknown) {
       setError(t("saveError") + " " + ((e as Error)?.message ?? t("unknownError")));
     }
   };
 
-  // Enviar enlace de reset
+  // Send reset link
   const handleSendResetLink = async () => {
     clearMessages();
     const target = notificationEmail || sessionEmail;
@@ -125,10 +125,10 @@ export default function SettingsClient() {
       setError(t("resetError") + " " + error.message);
       return;
     }
-    setSuccess(t("resetSent")); // <-- Feedback de éxito
+    setSuccess(t("resetSent")); 
   };
 
-  // --- NUEVO: Guardar endpoints ---
+  // Save endpoints
   const handleSaveEndpoints = async () => {
     if (!projectId) return;
     clearMessages();
@@ -139,7 +139,7 @@ export default function SettingsClient() {
       .map((line) => line.trim())
       .filter((line) => line.length > 0);
 
-      // validar TODAS las líneas no vacías
+      // validate ALL non-empty lines
       const invalid = endpointsArray.filter(
         (line) =>
           !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/i.test(line)
@@ -156,7 +156,7 @@ export default function SettingsClient() {
       }
 
     try {
-      const res = await fetch(`/api/projects/${projectId}`, { // Usa el PATCH que creamos
+      const res = await fetch(`/api/projects/${projectId}`, { 
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ monitored_endpoints: endpointsArray }),
@@ -165,7 +165,7 @@ export default function SettingsClient() {
         const errData = await res.json();
         throw new Error(errData.error || "No se pudo guardar");
       }
-      setSuccess(t("saveEndpointsSuccess")); // <-- Feedback de éxito
+      setSuccess(t("saveEndpointsSuccess")); 
     } catch (err: unknown) {
       setError((err as Error).message);
     } finally {
@@ -179,7 +179,7 @@ export default function SettingsClient() {
       <div className="min-h-screen py-10 px-4 md:px-10 bg-skin-bg text-skin-title">
         <div className="max-w-5xl mx-auto space-y-8">
           
-          {/* --- NUEVO: Contenedor de Alertas Globales --- */}
+          {/* Global Alerts Container */}
           {error && (
             <div className="bg-destructive/10 border border-destructive/50 text-destructive p-3 rounded-md flex items-center gap-3">
               <AlertTriangle className="w-5 h-5 flex-shrink-0" />
@@ -193,7 +193,7 @@ export default function SettingsClient() {
             </div>
           )}
 
-          {/* Notificaciones */}
+          {/* Notifications */}
           <section className="bg-skin-panel border border-border rounded-lg shadow-elev-1">
             <div className="p-6 space-y-4">
               <h2 className="text-lg font-semibold text-skin-title">
@@ -238,7 +238,7 @@ export default function SettingsClient() {
             </div>
           </section>
 
-          {/* --- NUEVO: SECCIÓN DE ENDPOINTS --- */}
+          {/* Endpoints section */}
           <section className="bg-skin-panel border border-border rounded-lg shadow-elev-1">
             <div className="p-6">
               <h2 className="text-xl font-semibold text-skin-title mb-2">
@@ -261,7 +261,7 @@ export default function SettingsClient() {
                   value={endpoints}
                   onChange={(e) => setEndpoints(e.target.value)}
                   className="font-mono text-sm min-h-[150px] bg-skin-input"
-                  disabled={!projectId} // Desactivar si no hay proyecto seleccionado
+                  disabled={!projectId}
                 />
               )}
             </div>
@@ -284,7 +284,7 @@ export default function SettingsClient() {
             </div>
           </section>
 
-          {/* Seguridad / perfil */}
+          {/* Security / profile */}
           <section className="bg-skin-panel border border-border rounded-lg p-6 space-y-4 shadow-elev-1">
             <h2 className="text-lg font-semibold text-skin-title">
               {t("securityTitle")}
