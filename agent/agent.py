@@ -11,14 +11,12 @@ import time
 from typing import Optional
 import requests
 
-# =============== CONFIG POR ENV ===============
 
 API_URL = os.getenv("BUGRADAR_API_URL", "http://localhost:3000/api/logs")
 LATENCY_API_URL = os.getenv("BUGRADAR_LATENCY_API_URL", "http://localhost:3000/api/latency")
 LATENCY_TARGET_URL = os.getenv("BUGRADAR_LATENCY_TARGET_URL")
 
-# --- ¡NUEVO! ---
-# La URL donde el agente pedirá la lista de endpoints a monitorear
+# Url from which the agent will fetch the list of endpoints to monitor
 CONFIG_URL = os.getenv("BUGRADAR_CONFIG_URL")
 
 API_KEY = os.getenv("BUGRADAR_API_KEY", "")
@@ -30,16 +28,14 @@ AUTH_HEADERS = {
     "Authorization": f"Bearer {API_KEY}"
 }
 
-# Configuración del Agente:
+# Agent configuration:
 MONITOR_CONTAINERS = os.getenv("BUGRADAR_CONTAINERS", "")
 TAIL = int(os.getenv("BUGRADAR_TAIL", "100"))
 PARSE_JSON = os.getenv("BUGRADAR_PARSE_JSON", "1") == "1"
-LATENCY_EVERY = int(os.getenv("BUGRADAR_LATENCY_EVERY", "300")) # 5 minutos por defecto
+LATENCY_EVERY = int(os.getenv("BUGRADAR_LATENCY_EVERY", "300")) # 5 minutes by default
 
 ERROR_KEYWORDS = ["error", "exception", "traceback", "failed", "critical", "panic", "fatal"]
 WARNING_KEYWORDS = ["warning", "warn", "deprecated", "timeout", "slow"]
-
-# =============== UTILS ===============
 
 def debug(msg: str):
     if os.getenv("BUGRADAR_DEBUG", "0") == "1":
@@ -64,7 +60,7 @@ def http_post(url: str, payload: dict, timeout=5, use_auth=True):
         print(f"  ❌ POST {url} error: {e}")
         return None
 
-# =============== SEVERITY CLASSIFICATION (Sin cambios) ===============
+# SEVERITY CLASSIFICATION
 
 def normalize_level(val: str) -> str:
     s = str(val).strip().lower()
@@ -98,7 +94,7 @@ def get_severity(line: str) -> Optional[str]:
             pass
     return get_severity_from_text(line)
 
-# =============== API PAYLOADS (Sin cambios) ===============
+# API PAYLOADS
 
 def send_log_to_api(log_message: str, container_name: str, severity: str):
     http_post(API_URL, {
@@ -115,7 +111,7 @@ def send_latency_to_api(endpoint: str, method: str, latency_ms: int, status_code
         "status_code": status_code,
     })
 
-# =============== DOCKER (Sin cambios) ===============
+# DOCKER
 
 def connect_to_docker():
     try:
@@ -127,8 +123,7 @@ def connect_to_docker():
         print(f"❌ Docker connection error: {e}")
         return None
 
-# =============== LOG MONITORING (Sin cambios) ===============
-
+# LOG MONITORING
 def stream_container_logs(container, out_q: queue.Queue):
     name = container.name
     if not should_monitor(name): return
@@ -162,11 +157,10 @@ def start_logs_threads(client) -> threading.Event:
         print(f"❌ Could not list containers for logs: {e}")
     return stop_evt
 
-# =============== LATENCY MONITORING (MODIFICADO) ===============
-
+# LATENCY MONITORING
 def measure_latency(endpoint_info):
     base_url = LATENCY_TARGET_URL.rstrip('/')
-    path = endpoint_info['rule'] # Ruta literal (ej: /api/users/1)
+    path = endpoint_info['rule'] # Literal path (e.g: /api/users/1)
     url = f"{base_url}{path}"
     method = endpoint_info['methods'][0]
     
@@ -183,10 +177,6 @@ def measure_latency(endpoint_info):
     except requests.RequestException as e:
         print(f"  ❌ [LATENCY] {method} {path} -> FAILED: {e}")
 
-# --- YA NO SE USA LA FUNCION get_endpoints_from_api ---
-# def get_endpoints_from_api():
-#     ...
-
 def latency_loop():
     if not LATENCY_TARGET_URL or not CONFIG_URL:
         print("🔬 Latency monitor disabled (missing LATENCY_TARGET_URL or BUGRADAR_CONFIG_URL)")
@@ -197,7 +187,7 @@ def latency_loop():
     while True:
         endpoints_to_monitor_raw = []
         try:
-            # 1. Pide la configuración a la API en cada ciclo
+            # Fetch the configuration from the API in each cycle
             debug(f"Fetching config from {CONFIG_URL}")
             r = requests.get(CONFIG_URL, headers=AUTH_HEADERS, timeout=10)
             
@@ -208,20 +198,18 @@ def latency_loop():
                     debug(f"Fetched {len(endpoints_to_monitor_raw)} endpoints from API.")
             else:
                 print(f"  ❌ Error fetching config: {r.status_code} {r.text[:100]}")
-                # No hacer 'continue' aquí, solo usar la lista vacía y esperar al próximo ciclo
             
         except Exception as e:
             print(f"  ❌ Error fetching config: {e}")
-            # En caso de fallo de red, usar lista vacía y reintentar tras el sleep
         
         try:
-            # 2. Procesa la lista de endpoints
+            # Process the list of endpoints
             endpoints_to_monitor = []
             for item in endpoints_to_monitor_raw:
                 item = item.strip()
                 if not item: continue
                 try:
-                    # Espera formato "METHOD /ruta/literal"
+                    # Wait for format "METHOD /literal/path"
                     method, rule = item.split(' ', 1)
                     endpoints_to_monitor.append({
                         "rule": rule.strip(),
@@ -230,15 +218,15 @@ def latency_loop():
                 except Exception as e:
                     print(f"  ❌ Skipping invalid endpoint format from API: '{item}'")
 
-            # 3. Mide la latencia para cada endpoint
+            # Measure latency for each endpoint
             if not endpoints_to_monitor:
                  debug("No endpoints to monitor in this cycle.")
             
             for endpoint_info in endpoints_to_monitor:
                 measure_latency(endpoint_info)
-                time.sleep(1) # Pequeña pausa entre cada endpoint
+                time.sleep(1) # Small pause between each endpoint
 
-            # 4. Espera antes de volver a empezar el ciclo
+            # Wait before starting the next cycle
             debug(f"Latency cycle complete. Waiting {LATENCY_EVERY}s...")
             time.sleep(LATENCY_EVERY)
             
@@ -248,23 +236,22 @@ def latency_loop():
             print(f"❌ Latency loop error (inner): {e}")
             time.sleep(LATENCY_EVERY)
 
-# =============== MAIN (Sin cambios) ===============
 
 def main():
     client = connect_to_docker()
     if not client: return
 
-    # Inicia el hilo de latencia
+    # Start the latency thread
     threading.Thread(target=latency_loop, daemon=True).start()
 
-    # Inicia los hilos de logs
+    # Start the logs threads
     stop_evt = start_logs_threads(client)
 
-    print("🚀 Agent started (Logs & Latency). (Ctrl+C to stop)")
+    print("Agent started (Logs & Latency). (Ctrl+C to stop)")
     try:
         while True: time.sleep(1)
     except KeyboardInterrupt:
-        print("\n🛑 Stopping agent...")
+        print("\n Stopping agent...")
         stop_evt.set()
 
 if __name__ == "__main__":

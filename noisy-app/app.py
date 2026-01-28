@@ -1,15 +1,15 @@
 import json, os, random, sys, time, socket, datetime as dt, threading
 from flask import Flask, jsonify, request
 
-# ============== HEALTHCHECK SERVER (FLASK) ==============
-# Simula un servicio que a veces falla para probar el uptime.
+
+# Simulate a service that sometimes fails to test uptime.
 
 app = Flask(__name__)
 
-# --- Endpoints de ejemplo ---
+# Endpoints
 @app.route('/health')
 def health_check():
-    """Endpoint de salud para el uptime."""
+    """Endpoint for uptime."""
     is_ok = random.choices([True, False], weights=[80, 20])[0]
     if is_ok:
         return jsonify({"status": "ok"}), 200
@@ -18,19 +18,19 @@ def health_check():
 
 @app.route('/api/users', methods=['GET'])
 def get_users():
-    """Simula una lectura de BBDD."""
+    """Simulate a database read."""
     time.sleep(random.uniform(0.05, 0.15))
     return jsonify([{"id": 1, "name": "Alice"}, {"id": 2, "name": "Bob"}])
 
 @app.route('/api/products/<int:product_id>', methods=['GET'])
 def get_product(product_id):
-    """Simula una lectura con latencia variable."""
+    """Simulate a variable latency read."""
     time.sleep(random.uniform(0.1, 0.3))
     return jsonify({"id": product_id, "name": f"Product {product_id}", "price": 99.9})
 
 @app.route('/api/orders', methods=['POST'])
 def create_order():
-    """Simula una escritura con posible fallo."""
+    """Simulate a write with possible failure."""
     time.sleep(random.uniform(0.2, 0.5))
     if random.random() < 0.1:
         return jsonify({"error": "Internal server error"}), 500
@@ -45,7 +45,7 @@ def run_flask_app():
 threading.Thread(target=run_flask_app, daemon=True).start()
 
 
-# ============== SCRIPT DE LOGS RUIDOSOS (sin cambios) ==============
+# Noisy logs script
 
 APP_NAME = os.getenv("APP_NAME", "noisy-app")
 LEVELS = ["warning", "error"]
