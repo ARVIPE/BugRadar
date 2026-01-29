@@ -18,7 +18,7 @@
     "noAccount": "Don't have an account?",
     "signup": "Sign up",
     "errorInvalid": "Email or password is incorrect. Please try again.",
-    "quote": "Even bugs deserve to be seen... and reported 👀"
+    "quote": "Even bugs deserve to be seen... and reported"
   },
   "Signup": {
     "title": "Create your BugRadar account",
@@ -26,12 +26,12 @@
     "email": "Email",
     "password": "Password",
     "confirmPassword": "Confirm password",
-    "errorMismatch": "Passwords do not match 🐞",
+    "errorMismatch": "Passwords do not match",
     "submit": "Sign up",
     "submitting": "Signing up...",
     "haveAccount": "Already have an account?",
     "goLogin": "Log in",
-    "quote": "Bugs don't register themselves. Yet. 🐛"
+    "quote": "Bugs don't register themselves. Yet."
   },
   "Dashboard": {
     "overview": "Dashboard Overview",
@@ -60,7 +60,6 @@
     "installAgentTitle": "Install the Docker agent",
     "installAgentDesc": "Run this command on the server where your containers are running:",
     "endpointsPlaceholder": "Type endpoints to be monitorised por ejemplo: GET /api/health"
-  
   },
   "LogStream": {
     "title": "Log Stream",
@@ -207,14 +206,7 @@
     "updateButton": "Update password",
     "saving": "Saving…",
     "updateError": "Could not update the password.",
-    "success": "Password updated successfully ✅",
+    "success": "Password updated successfully",
     "successDesc": "You can now close this page and log in with your new password."
   }
-
-
-
-
-
-
-
 }

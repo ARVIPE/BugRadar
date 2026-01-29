@@ -96,7 +96,7 @@ export async function POST(req: Request) {
             await resend.emails.send({
               from: "bugradar.noreply@resend.dev",
               to: notifyEmail,
-              subject: `🚨 Error detectado en ${parsed.data.container_name}`,
+              subject: `Error detectado en ${parsed.data.container_name}`,
               html: `<p>Se ha detectado un nuevo error:</p>
                      <pre>${parsed.data.log_message}</pre>
                      <p>Contenedor: ${parsed.data.container_name}</p>`,

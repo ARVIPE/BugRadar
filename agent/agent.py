@@ -21,7 +21,7 @@ CONFIG_URL = os.getenv("BUGRADAR_CONFIG_URL")
 
 API_KEY = os.getenv("BUGRADAR_API_KEY", "")
 if not API_KEY:
-    print("❌ BUGRADAR_API_KEY is not set. The agent will not work.")
+    print("ERROR: BUGRADAR_API_KEY is not set. The agent will not work.")
     exit(1)
 
 AUTH_HEADERS = {
@@ -52,12 +52,12 @@ def http_post(url: str, payload: dict, timeout=5, use_auth=True):
         headers = AUTH_HEADERS if use_auth else {}
         r = requests.post(url, json=payload, timeout=timeout, headers=headers)
         if r.status_code not in (200, 201):
-            print(f"  ❌ POST {url} -> {r.status_code}: {r.text[:300]}")
+            print(f"  ERROR: POST {url} -> {r.status_code}: {r.text[:300]}")
         else:
             debug(f"POST {url} ok")
         return r
     except Exception as e:
-        print(f"  ❌ POST {url} error: {e}")
+        print(f"  ERROR: POST {url} error: {e}")
         return None
 
 # SEVERITY CLASSIFICATION
@@ -117,10 +117,10 @@ def connect_to_docker():
     try:
         client = docker.from_env()
         client.ping()
-        print("✅ Docker connection successful.")
+        print("Docker connection successful.")
         return client
     except docker.errors.DockerException as e:
-        print(f"❌ Docker connection error: {e}")
+        print(f"ERROR: Docker connection error: {e}")
         return None
 
 # LOG MONITORING
@@ -133,7 +133,7 @@ def stream_container_logs(container, out_q: queue.Queue):
             line = raw.decode("utf-8", errors="replace").strip()
             if line: out_q.put((name, line))
     except Exception as e:
-        print(f"❌ Log stream error [{name}]: {e}")
+        print(f"ERROR: Log stream error [{name}]: {e}")
 
 def logs_dispatcher(out_q: queue.Queue, stop_evt: threading.Event):
     while not stop_evt.is_set():
@@ -154,7 +154,7 @@ def start_logs_threads(client) -> threading.Event:
             if should_monitor(c.name):
                 threading.Thread(target=stream_container_logs, args=(c, out_q), daemon=True).start()
     except Exception as e:
-        print(f"❌ Could not list containers for logs: {e}")
+        print(f"ERROR: Could not list containers for logs: {e}")
     return stop_evt
 
 # LATENCY MONITORING
@@ -175,14 +175,14 @@ def measure_latency(endpoint_info):
         print(f"  [LATENCY] {method} {path} -> {r.status_code} in {latency_ms}ms")
         send_latency_to_api(endpoint_rule_for_api, method, latency_ms, r.status_code)
     except requests.RequestException as e:
-        print(f"  ❌ [LATENCY] {method} {path} -> FAILED: {e}")
+        print(f"  ERROR: [LATENCY] {method} {path} -> FAILED: {e}")
 
 def latency_loop():
     if not LATENCY_TARGET_URL or not CONFIG_URL:
-        print("🔬 Latency monitor disabled (missing LATENCY_TARGET_URL or BUGRADAR_CONFIG_URL)")
+        print("Latency monitor disabled (missing LATENCY_TARGET_URL or BUGRADAR_CONFIG_URL)")
         return
     
-    print("🔬 Starting latency monitor (mode: API config)...")
+    print("Starting latency monitor (mode: API config)...")
 
     while True:
         endpoints_to_monitor_raw = []
@@ -197,10 +197,10 @@ def latency_loop():
                 if endpoints_to_monitor_raw:
                     debug(f"Fetched {len(endpoints_to_monitor_raw)} endpoints from API.")
             else:
-                print(f"  ❌ Error fetching config: {r.status_code} {r.text[:100]}")
+                print(f"  ERROR: Error fetching config: {r.status_code} {r.text[:100]}")
             
         except Exception as e:
-            print(f"  ❌ Error fetching config: {e}")
+            print(f"  ERROR: Error fetching config: {e}")
         
         try:
             # Process the list of endpoints
@@ -216,7 +216,7 @@ def latency_loop():
                         "methods": [method.strip().upper()]
                     })
                 except Exception as e:
-                    print(f"  ❌ Skipping invalid endpoint format from API: '{item}'")
+                    print(f"  ERROR: Skipping invalid endpoint format from API: '{item}'")
 
             # Measure latency for each endpoint
             if not endpoints_to_monitor:
@@ -233,7 +233,7 @@ def latency_loop():
         except KeyboardInterrupt:
             break
         except Exception as e:
-            print(f"❌ Latency loop error (inner): {e}")
+            print(f"ERROR: Latency loop error (inner): {e}")
             time.sleep(LATENCY_EVERY)
 
 

@@ -18,7 +18,7 @@
     "noAccount": "¿No tienes cuenta?",
     "signup": "Regístrate",
     "errorInvalid": "El correo o la contraseña son incorrectos. Por favor inténtalo de nuevo.",
-    "quote": "Hasta los bugs merecen ser vistos... y reportados 👀"
+    "quote": "Hasta los bugs merecen ser vistos... y reportados"
   },
   "Signup": {
     "title": "Crea tu cuenta en BugRadar",
@@ -26,12 +26,12 @@
     "email": "Email",
     "password": "Contraseña",
     "confirmPassword": "Confirmar contraseña",
-    "errorMismatch": "Las contraseñas no coinciden 🐞",
+    "errorMismatch": "Las contraseñas no coinciden",
     "submit": "Registrarse",
     "submitting": "Registrando...",
     "haveAccount": "¿Ya tienes una cuenta?",
     "goLogin": "Inicia sesión",
-    "quote": "Los bugs no se registran solos. Todavía. 🐛"
+    "quote": "Los bugs no se registran solos. Todavía."
   },
   "Dashboard": {
     "overview": "Resumen del Panel",
@@ -59,7 +59,7 @@
     "deleteErrorWithMsg": "Error al borrar: {message}",
     "installAgentTitle": "Instala el agente Docker",
     "installAgentDesc": "Ejecuta este comando en el servidor donde corren tus contenedores:",
-    "endpointsPlaceholder": "Escribe las rutas a monitorizar por ejemplo: GET /api/health"   
+    "endpointsPlaceholder": "Escribe las rutas a monitorizar por ejemplo: GET /api/health"
   },
   "LogStream": {
     "title": "Flujo de logs",
@@ -206,8 +206,7 @@
     "updateButton": "Actualizar contraseña",
     "saving": "Guardando…",
     "updateError": "No se pudo actualizar la contraseña.",
-    "success": "Contraseña actualizada correctamente ✅",
+    "success": "Contraseña actualizada correctamente",
     "successDesc": "Ya puedes cerrar esta página e iniciar sesión con tu nueva contraseña."
   }
-
 }
