@@ -74,7 +74,9 @@ export default function Navbar() {
   }
 
   const handleLogout = () => {
-    signOut({ callbackUrl: `/${locale}` })
+    // Redirect to the current origin (local or prod) + locale
+    const callbackUrl = `${window.location.origin}/${locale}`
+    signOut({ callbackUrl })
   }
 
   return (
