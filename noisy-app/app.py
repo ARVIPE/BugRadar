@@ -7,7 +7,7 @@ from flask import Flask, jsonify, request
 app = Flask(__name__)
 
 # Endpoints
-@app.route('/health')
+@app.route('/api/health')
 def health_check():
     """Endpoint for uptime."""
     is_ok = random.choices([True, False], weights=[80, 20])[0]
@@ -75,4 +75,4 @@ while True:
         "host": socket.gethostname(),
     }
     print(json.dumps(payload), flush=True)
-    time.sleep(600)
+    time.sleep(30) 
