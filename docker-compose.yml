@@ -21,11 +21,10 @@ services:
     restart: always
     environment:
       BUGRADAR_API_KEY: "proj_15068619e0e0b5f5caaaa5cba77e1599"
-      BUGRADAR_API_URL: "http://host.docker.internal:3000/api/logs"
-      BUGRADAR_LATENCY_API_URL: "http://host.docker.internal:3000/api/latency"
       
-      # --- URLs para el agente ---
-      BUGRADAR_CONFIG_URL: "http://host.docker.internal:3000/api/config"
+      BUGRADAR_API_URL: "https://bugradar-app.netlify.app/api/logs"
+      BUGRADAR_LATENCY_API_URL: "https://bugradar-app.netlify.app/api/latency"
+      BUGRADAR_CONFIG_URL: "https://bugradar-app.netlify.app/api/config"
       BUGRADAR_LATENCY_TARGET_URL: "http://noisy-app:5000"
       
       BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"

@@ -23,7 +23,7 @@ interface Project {
   apiKey?: string;
 }
 
-const BACKEND_URL = "http://host.docker.internal:3000";
+const BACKEND_URL = "https://bugradar-app.netlify.app/";
 
 function slugify(name: string) {
   return name
