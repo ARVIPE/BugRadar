@@ -1,4 +1,3 @@
-
 services:
   noisy-app:
     build:
@@ -20,13 +19,14 @@ services:
     container_name: bugradar-agent
     restart: always
     environment:
-      BUGRADAR_API_KEY: "proj_15068619e0e0b5f5caaaa5cba77e1599"
-      
-      BUGRADAR_API_URL: "https://bugradar-app.netlify.app/api/logs"
-      BUGRADAR_LATENCY_API_URL: "https://bugradar-app.netlify.app/api/latency"
-      BUGRADAR_CONFIG_URL: "https://bugradar-app.netlify.app/api/config"
+      BUGRADAR_API_KEY: "proj_fac4441e48a419c8f0da85f312b2b3b1"
+      BUGRADAR_API_URL: "https://bugradar-app.netlify.app//api/logs"
+      BUGRADAR_LATENCY_API_URL: "https://bugradar-app.netlify.app//api/latency"
+
+      # --- URLs para el agente ---
+      BUGRADAR_CONFIG_URL: "https://bugradar-app.netlify.app//api/config"
       BUGRADAR_LATENCY_TARGET_URL: "http://noisy-app:5000"
-      
+
       BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"
       BUGRADAR_CONTAINERS: "noisy-app"
       BUGRADAR_TAIL: "100"
