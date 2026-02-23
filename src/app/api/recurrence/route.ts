@@ -1,13 +1,13 @@
-import { NextResponse } from 'next/server';
+import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
-import { authConfig } from '@/lib/auth.config';
+import { authConfig } from "@/lib/auth.config";
 import { createClient } from "@supabase/supabase-js";
 
 const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-    { auth: { persistSession: false } }
+    { auth: { persistSession: false } },
   );
 
 export async function GET(req: Request) {
@@ -25,13 +25,13 @@ export async function GET(req: Request) {
   if (!projectId) {
     return NextResponse.json(
       { error: "project_id is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
   if (!logMessage) {
     return NextResponse.json(
       { error: "log_message is required" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 
@@ -48,15 +48,13 @@ export async function GET(req: Request) {
   if (projectError || !projectData) {
     return NextResponse.json(
       { error: "Project not found or access denied" },
-      { status: 403 }
+      { status: 403 },
     );
   }
 
-
   try {
-
     const sevenDaysAgo = new Date(
-      Date.now() - 7 * 24 * 60 * 60 * 1000
+      Date.now() - 7 * 24 * 60 * 60 * 1000,
     ).toISOString();
 
     // Get events from the last 7 days
@@ -66,21 +64,25 @@ export async function GET(req: Request) {
       .eq("project_id", projectId) // Security filter
       .gt("created_at", sevenDaysAgo); // 7-day filter
 
+    // Escape special SQL LIKE pattern characters to avoid broken queries
+    function escapeLike(str: string) {
+      return str.replace(/%/g, "\\%").replace(/_/g, "\\_");
+    }
 
     try {
       const parsedLog = JSON.parse(logMessage);
       const errorMsg = parsedLog.msg;
 
       if (errorMsg) {
-        // Use 'like' to search for the error message within the JSON!
-        query = query.like("log_message", `%${errorMsg}%`);
+        // ilike = case-insensitive LIKE in Supabase/PostgREST
+        query = query.ilike("log_message", `%${escapeLike(errorMsg)}%`);
       } else {
         query = query.eq("log_message", logMessage);
       }
     } catch {
       query = query.eq("log_message", logMessage);
     }
-    
+
     const { data, error } = await query;
 
     if (error) {
@@ -119,6 +121,9 @@ export async function GET(req: Request) {
     return NextResponse.json(chartData);
   } catch (error: unknown) {
     console.error("Error fetching recurrence stats:", (error as Error).message);
-    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 500 },
+    );
   }
 }

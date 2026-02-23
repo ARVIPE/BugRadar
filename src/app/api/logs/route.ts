@@ -11,12 +11,10 @@ const supabase = () =>
   createClient(
     process.env.SUPABASE_URL as string,
     process.env.SUPABASE_SERVICE_ROLE_KEY as string,
-    { auth: { persistSession: false } }
+    { auth: { persistSession: false } },
   );
 
-async function getProjectIdFromApiKey(
-  apiKey: string
-): Promise<string | null> {
+async function getProjectIdFromApiKey(apiKey: string): Promise<string | null> {
   if (!apiKey || !apiKey.startsWith("proj_")) {
     return null;
   }
@@ -45,7 +43,7 @@ const LogSchema = z.object({
 export async function POST(req: Request) {
   try {
     const authHeader = req.headers.get("Authorization");
-    const apiKey = authHeader?.split(" ")[1]; 
+    const apiKey = authHeader?.split(" ")[1];
 
     if (!apiKey) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -61,7 +59,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json(
         { error: parsed.error.flatten() },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -102,17 +100,17 @@ export async function POST(req: Request) {
                      <p>Contenedor: ${parsed.data.container_name}</p>`,
             });
             console.log(
-              `Correo de error enviado a ${notifyEmail} (usuario: ${userEmail})`
+              `Correo de error enviado a ${notifyEmail} (usuario: ${userEmail})`,
             );
           } else {
             console.warn(
-              `Usuario con ID ${projectData.user_id} no encontrado. No se enviará notificación.`
+              `Usuario con ID ${projectData.user_id} no encontrado. No se enviará notificación.`,
             );
           }
         } else {
           console.error(
             "Error al buscar proyecto para enviar email:",
-            projectError
+            projectError,
           );
         }
       } catch (emailError) {
@@ -125,7 +123,7 @@ export async function POST(req: Request) {
     console.error("Error in POST /api/logs:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -142,7 +140,7 @@ export async function GET(req: Request) {
     if (!projectId) {
       return NextResponse.json(
         { error: "project_id is required" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -154,12 +152,15 @@ export async function GET(req: Request) {
       .limit(limit);
 
     if (logMessage) {
+      function escapeLike(str: string) {
+        return str.replace(/%/g, "\\%").replace(/_/g, "\\_");
+      }
       try {
         const parsedLog = JSON.parse(logMessage);
         const errorMsg = parsedLog.msg;
 
         if (errorMsg) {
-          q = q.like("log_message", `%${errorMsg}%`);
+          q = q.ilike("log_message", `%${escapeLike(errorMsg)}%`);
         } else {
           q = q.eq("log_message", logMessage);
         }
@@ -181,7 +182,7 @@ export async function GET(req: Request) {
     console.error("Error in GET /api/logs:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -189,7 +190,7 @@ export async function GET(req: Request) {
 async function getUserEmailById(userId: string): Promise<string | null> {
   const adminSupabase = createClient(
     process.env.SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
   const { data, error } = await adminSupabase.auth.admin.getUserById(userId);
   if (error || !data.user) {

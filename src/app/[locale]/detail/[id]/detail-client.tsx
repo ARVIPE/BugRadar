@@ -1,11 +1,17 @@
 "use client";
 
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Footer from "@/components/footer";
 import Navbar from "@/components/navbar";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Share2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart,
@@ -44,7 +50,35 @@ export default function DetailPage({ id }: { id: string }) {
 
   const [recurrenceData, setRecurrenceData] = useState<RecurrenceData[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
+  // Keep a ref to the loaded event so the polling can access it without stale closure
+  const eventRef = useRef<EventItem | null>(null);
 
+  // Fetch recurrence chart data — called on load and every 30 s for live updates
+  const loadRecurrenceChart = useCallback(
+    async (ev: EventItem, setLoading = false) => {
+      if (setLoading) setChartLoading(true);
+      try {
+        const recurrenceRes = await fetch(
+          `/api/recurrence?project_id=${
+            ev.project_id
+          }&log_message=${encodeURIComponent(ev.log_message)}`,
+          { cache: "no-store" },
+        );
+        if (recurrenceRes.ok) {
+          const chartData: RecurrenceData[] = await recurrenceRes.json();
+          setRecurrenceData(chartData);
+        }
+      } catch (chartError) {
+        console.error("Failed to load recurrence data", chartError);
+        if (setLoading) setRecurrenceData([]);
+      } finally {
+        if (setLoading) setChartLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Main load: fetch the event, chart and related logs once
   useEffect(() => {
     let mounted = true;
 
@@ -58,41 +92,24 @@ export default function DetailPage({ id }: { id: string }) {
         const ev: EventItem = await res.json();
         if (!mounted) return;
         setEvent(ev);
+        eventRef.current = ev;
 
-        // recurrence data
-        try {
-          const recurrenceRes = await fetch(
-            `/api/recurrence?project_id=${
-              ev.project_id
-            }&log_message=${encodeURIComponent(ev.log_message)}`,
-            { cache: "no-store" }
-          );
-          if (recurrenceRes.ok) {
-            const chartData: RecurrenceData[] = await recurrenceRes.json();
-            if (mounted) {
-              setRecurrenceData(chartData);
-            }
-          }
-        } catch (chartError) {
-          console.error("Failed to load recurrence data", chartError);
-          if (mounted) setRecurrenceData([]);
-        } finally {
-          if (mounted) setChartLoading(false);
-        }
+        // recurrence chart (initial load)
+        await loadRecurrenceChart(ev, true);
 
         // related events
         const relRes = await fetch(
           `/api/logs?project_id=${
             ev.project_id
           }&log_message=${encodeURIComponent(ev.log_message)}&limit=10`,
-          { cache: "no-store" }
+          { cache: "no-store" },
         );
         const relJson = await relRes.json();
         const others: EventItem[] = (relJson.items ?? []).filter(
-          (x: EventItem) => x.id !== ev.id
+          (x: EventItem) => x.id !== ev.id,
         );
-        setRelated(others.slice(0, 3));
-      } catch{
+        if (mounted) setRelated(others.slice(0, 3));
+      } catch {
         setEvent(null);
         setChartLoading(false);
       } finally {
@@ -104,7 +121,17 @@ export default function DetailPage({ id }: { id: string }) {
     return () => {
       mounted = false;
     };
-  }, [id]);
+  }, [id, loadRecurrenceChart]);
+
+  // Polling: refresh the recurrence chart every 30 seconds automatically
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (eventRef.current) {
+        loadRecurrenceChart(eventRef.current, false);
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [loadRecurrenceChart]);
 
   const handleShare = async () => {
     if (!event) return;
@@ -118,7 +145,6 @@ export default function DetailPage({ id }: { id: string }) {
       prompt(t("copyManually") ?? "Copy this link:", shareUrl);
     }
   };
-
 
   const title = useMemo(() => {
     if (!event) return t("notFound");
@@ -296,7 +322,11 @@ export default function DetailPage({ id }: { id: string }) {
                 >
                   {saving === "ignore" ? t("ignoring") : t("ignore")}
                 </Button>
-                <Button variant="ghost" className="w-full" onClick={handleShare}>
+                <Button
+                  variant="ghost"
+                  className="w-full"
+                  onClick={handleShare}
+                >
                   <Share2 size={16} className="mr-2" /> {t("share")}
                 </Button>
 
@@ -335,15 +365,15 @@ export default function DetailPage({ id }: { id: string }) {
                       event?.severity === "error"
                         ? "border-destructive/30 text-destructive"
                         : event?.severity === "warning"
-                        ? "border-[var(--yellow)]/30 text-[var(--yellow)]"
-                        : "border-border text-skin-subtitle"
+                          ? "border-[var(--yellow)]/30 text-[var(--yellow)]"
+                          : "border-border text-skin-subtitle"
                     }`}
                   >
                     {event?.severity === "error"
                       ? t("severityHigh")
                       : event?.severity === "warning"
-                      ? t("severityMedium")
-                      : t("severityLow")}
+                        ? t("severityMedium")
+                        : t("severityLow")}
                   </span>
                 </div>
               </div>
@@ -368,15 +398,15 @@ export default function DetailPage({ id }: { id: string }) {
                             log.severity === "error"
                               ? "text-destructive border border-destructive"
                               : log.severity === "warning"
-                              ? "text-[var(--yellow)] border border-[color:var(--yellow)]/40"
-                              : "text-skin-subtitle border"
+                                ? "text-[var(--yellow)] border border-[color:var(--yellow)]/40"
+                                : "text-skin-subtitle border"
                           }`}
                         >
                           {log.severity === "error"
                             ? t("badgeHigh")
                             : log.severity === "warning"
-                            ? t("badgeWarning")
-                            : t("badgeInfo")}
+                              ? t("badgeWarning")
+                              : t("badgeInfo")}
                         </span>
                         <span className="text-xs text-skin-subtitle">
                           {new Date(log.created_at).toLocaleTimeString()}
