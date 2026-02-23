@@ -59,7 +59,9 @@
     "deleteErrorWithMsg": "Error al borrar: {message}",
     "installAgentTitle": "Instala el agente Docker",
     "installAgentDesc": "Ejecuta este comando en el servidor donde corren tus contenedores:",
-    "endpointsPlaceholder": "Escribe las rutas a monitorizar por ejemplo: GET /api/health"
+    "endpointsPlaceholder": "Escribe las rutas a monitorizar por ejemplo: GET /api/health",
+    "downloadAgent": "Descargar agente (.zip)",
+    "downloadAgentDesc": "Descarga el código fuente del agente para desplegarlo en tu servidor"
   },
   "LogStream": {
     "title": "Flujo de logs",

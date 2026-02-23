@@ -1,13 +1,20 @@
-// src/i18n/request.ts
-import {getRequestConfig} from "next-intl/server";
+import { getRequestConfig } from "next-intl/server";
+import { routing } from "./routing";
 
-const DEFAULT_LOCALE = "en";
+export default getRequestConfig(async ({ requestLocale }) => {
+  // requestLocale is a Promise in next-intl v4
+  let locale = await requestLocale;
 
-export default getRequestConfig(async ({locale}) => {
-  const activeLocale = locale ?? DEFAULT_LOCALE;
+  // Validate that the locale is supported, fall back to default if not
+  if (
+    !locale ||
+    !routing.locales.includes(locale as (typeof routing.locales)[number])
+  ) {
+    locale = routing.defaultLocale;
+  }
 
   return {
-    locale: activeLocale,
-    messages: (await import(`../../messages/${activeLocale}.json`)).default,
+    locale,
+    messages: (await import(`../../messages/${locale}.json`)).default,
   };
 });

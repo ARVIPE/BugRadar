@@ -14,6 +14,7 @@ import {
   Copy,
   Check,
   Trash2,
+  Download,
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 
@@ -26,10 +27,12 @@ interface Project {
 const BACKEND_URL = "https://bugradar-app.netlify.app/";
 
 function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "app";
+  return (
+    name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "app"
+  );
 }
 
 export default function ProjectsClient() {
@@ -39,8 +42,8 @@ export default function ProjectsClient() {
 
   const [projects, setProjects] = useState<Project[]>([]);
   const [newProjectName, setNewProjectName] = useState("");
-  const [newProjectEndpoints, setNewProjectEndpoints] = useState(""); 
-  
+  const [newProjectEndpoints, setNewProjectEndpoints] = useState("");
+
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -64,7 +67,6 @@ export default function ProjectsClient() {
       .finally(() => setIsLoading(false));
   }, [t]);
 
-
   const handleCreateProject = async (e: FormEvent) => {
     e.preventDefault();
     if (!newProjectName.trim()) return;
@@ -75,16 +77,19 @@ export default function ProjectsClient() {
     setError(null);
 
     const endpointsArray = newProjectEndpoints
-      .split('\n')
-      .map(line => line.trim())
-      .filter(line => line.length > 0);
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
 
     const invalid = endpointsArray.filter(
-      line => !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/.test(line)
+      (line) =>
+        !/^(GET|POST|PUT|PATCH|DELETE|HEAD|OPTIONS)\s+\/[^\s]*$/.test(line),
     );
 
     if (invalid.length > 0) {
-      setError(`Algunas líneas no tienen formato válido (ejemplo: "GET /api/health"):\n${invalid.join('\n')}`);
+      setError(
+        `Algunas líneas no tienen formato válido (ejemplo: "GET /api/health"):\n${invalid.join("\n")}`,
+      );
       setIsCreating(false);
       return;
     }
@@ -92,9 +97,9 @@ export default function ProjectsClient() {
     const res = await fetch("/api/projects", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
+      body: JSON.stringify({
         name: newProjectName,
-        monitored_endpoints: endpointsArray 
+        monitored_endpoints: endpointsArray,
       }),
     });
 
@@ -102,15 +107,18 @@ export default function ProjectsClient() {
       const newProject: Project = await res.json();
       setProjects((prev) => [newProject, ...prev]);
       setNewProjectName("");
-      setNewProjectEndpoints(""); 
-      
+      setNewProjectEndpoints("");
+
       if (newProject.apiKey) {
         const slug = slugify(newProject.name || "app");
-        const compose = `
+        const compose =
+          `
 services:
   ${slug}:
     build:
-      context: ./` + slug + `
+      context: ./` +
+          slug +
+          `
     container_name: ${slug}
     ports:
       - "5000:5000"
@@ -159,7 +167,7 @@ networks:
     }
     setIsCreating(false);
   };
-  
+
   const handleCopyCompose = () => {
     if (dockerCompose) {
       navigator.clipboard.writeText(dockerCompose);
@@ -168,13 +176,22 @@ networks:
     }
   };
 
+  const handleDownloadAgent = () => {
+    const a = document.createElement("a");
+    a.href = "/api/download-agent";
+    a.download = "bugradar-agent.zip";
+    a.click();
+  };
+
   const selectProject = (id: string) => {
     localStorage.setItem("selectedProjectId", id);
     router.push(`/${locale}/dashboard`);
   };
 
   const handleDeleteProject = async (id: string, name: string) => {
-    const confirmation = prompt(t("deleteConfirmPrompt", { projectName: name }));
+    const confirmation = prompt(
+      t("deleteConfirmPrompt", { projectName: name }),
+    );
     if (confirmation !== name) {
       setError(t("deleteNameMismatch"));
       return;
@@ -192,7 +209,6 @@ networks:
     }
   };
 
-
   if (isLoading)
     return (
       <div className="flex flex-col items-center justify-center min-h-[50vh]">
@@ -200,7 +216,7 @@ networks:
         <p className="mt-4 text-skin-subtitle">{t("loadingProjects")}</p>
       </div>
     );
-    
+
   return (
     <div className="min-h-screen w-full bg-skin-bg text-skin-title">
       <Navbar />
@@ -215,11 +231,11 @@ networks:
 
         {/* Docker compose generated */}
         {dockerCompose && (
-          <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5">
-            <h3 className="font-semibold text-skin-title mb-2">
+          <div className="bg-skin-panel border border-border rounded-lg shadow-elev-1 p-5 space-y-4">
+            <h3 className="font-semibold text-skin-title">
               docker-compose.yml generado
             </h3>
-            <p className="text-sm text-skin-subtitle mb-3">
+            <p className="text-sm text-skin-subtitle">
               Guarda este archivo junto a tu proyecto y ejecuta:
               <code className="ml-2">docker compose up -d</code>
             </p>
@@ -240,6 +256,21 @@ networks:
                 ) : (
                   <Copy className="w-4 h-4" />
                 )}
+              </Button>
+            </div>
+
+            {/* Download agent */}
+            <div className="border-t border-border pt-4">
+              <p className="text-sm text-skin-subtitle mb-3">
+                {t("downloadAgentDesc")}
+              </p>
+              <Button
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleDownloadAgent}
+              >
+                <Download className="w-4 h-4" />
+                {t("downloadAgent")}
               </Button>
             </div>
           </div>
@@ -301,14 +332,17 @@ networks:
               onChange={(e) => setNewProjectName(e.target.value)}
               className="bg-skin-input border-border focus:ring-[var(--ring)]"
             />
-            
+
             <Textarea
-              placeholder={t("endpointsPlaceholder", { example1: "GET /api/health", example2: "POST /api/login" })}
-              value={newProjectEndpoints} 
+              placeholder={t("endpointsPlaceholder", {
+                example1: "GET /api/health",
+                example2: "POST /api/login",
+              })}
+              value={newProjectEndpoints}
               onChange={(e) => setNewProjectEndpoints(e.target.value)}
               className="bg-skin-input border-border focus:ring-[var(--ring)] font-mono text-sm min-h-[120px]"
             />
-            
+
             <Button
               type="submit"
               disabled={isCreating || !newProjectName}

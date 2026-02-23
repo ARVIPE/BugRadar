@@ -59,7 +59,9 @@
     "deleteErrorWithMsg": "Error deleting project: {message}",
     "installAgentTitle": "Install the Docker agent",
     "installAgentDesc": "Run this command on the server where your containers are running:",
-    "endpointsPlaceholder": "Type endpoints to be monitorised por ejemplo: GET /api/health"
+    "endpointsPlaceholder": "Type endpoints to be monitorised por ejemplo: GET /api/health",
+    "downloadAgent": "Download agent (.zip)",
+    "downloadAgentDesc": "Download the agent source code to deploy it on your server"
   },
   "LogStream": {
     "title": "Log Stream",

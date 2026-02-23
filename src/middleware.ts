@@ -1,15 +1,12 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { withAuth } from "next-auth/middleware";
 import createIntlMiddleware from "next-intl/middleware";
+import { routing } from "./i18n/routing";
 
-const locales = ["en", "es"] as const;
-const defaultLocale = "es";
+const { locales, defaultLocale } = routing;
 
 // --- next-intl ---
-const intlMiddleware = createIntlMiddleware({
-  locales: Array.from(locales),
-  defaultLocale,
-});
+const intlMiddleware = createIntlMiddleware(routing);
 
 // redirect root "/" → "/es"
 function baseRedirect(request: NextRequest) {
@@ -64,19 +61,17 @@ export default withAuth(
       authorized: ({ token, req }) => {
         const pathname = req.nextUrl.pathname;
 
-        if (
-          pathname === "/es" ||
-          pathname === "/en" ||
-          pathname.startsWith("/es/signup") ||
-          pathname.startsWith("/en/signup")
-        ) {
-          return true;
-        }
+        // Allow public access to login and signup pages for all locales
+        const isPublic = locales.some(
+          (loc) =>
+            pathname === `/${loc}` || pathname.startsWith(`/${loc}/signup`),
+        );
 
+        if (isPublic) return true;
         return !!token;
       },
     },
-  }
+  },
 );
 
 export const config = {
