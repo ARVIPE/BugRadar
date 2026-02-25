@@ -24,7 +24,7 @@ interface Project {
   apiKey?: string;
 }
 
-const BACKEND_URL = "https://bugradar-app.netlify.app/";
+const BACKEND_URL = "https://bugradar-app.netlify.app";
 
 function slugify(name: string) {
   return (

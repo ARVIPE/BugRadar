@@ -1,14 +1,14 @@
 services:
-  noisy-app:
+  noisiest-app:
     build:
-      context: ./noisy-app
-    container_name: noisy-app
+      context: ./noisiest-app
+    container_name: noisiest-app
     ports:
       - "5000:5000"
     labels:
       - bugradar=true
     environment:
-      APP_NAME: "noisy-app"
+      APP_NAME: "noisiest-app"
     networks:
       - bugradar-net
 
@@ -19,16 +19,16 @@ services:
     container_name: bugradar-agent
     restart: always
     environment:
-      BUGRADAR_API_KEY: "proj_fac4441e48a419c8f0da85f312b2b3b1"
-      BUGRADAR_API_URL: "https://bugradar-app.netlify.app//api/logs"
-      BUGRADAR_LATENCY_API_URL: "https://bugradar-app.netlify.app//api/latency"
+      BUGRADAR_API_KEY: "proj_4a9e276a63367a4fad6fc2a614e1a6da"
+      BUGRADAR_API_URL: "https://bugradar-app.netlify.app/api/logs"
+      BUGRADAR_LATENCY_API_URL: "https://bugradar-app.netlify.app/api/latency"
 
       # --- URLs para el agente ---
-      BUGRADAR_CONFIG_URL: "https://bugradar-app.netlify.app//api/config"
-      BUGRADAR_LATENCY_TARGET_URL: "http://noisy-app:5000"
+      BUGRADAR_CONFIG_URL: "https://bugradar-app.netlify.app/api/config"
+      BUGRADAR_LATENCY_TARGET_URL: "http://noisiest-app:5000"
 
       BUGRADAR_DISCOVER_BY_LABEL: "bugradar=true"
-      BUGRADAR_CONTAINERS: "noisy-app"
+      BUGRADAR_CONTAINERS: "noisiest-app"
       BUGRADAR_TAIL: "100"
       BUGRADAR_PARSE_JSON: "1"
       PYTHONUNBUFFERED: "1"
